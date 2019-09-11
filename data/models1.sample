@@ -3,7 +3,7 @@ package models
 
 import (
 	"time"
-	"test"
+	t "test"
 )
 
 // User is a model.
@@ -16,4 +16,13 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// This is yet another test
+/* this is a func */
+func test(t int) {
+	fmt.Println(t)
+}
+
+
+/* this is a func */
+func test_1(t int, a string) {
+	fmt.Println(t + a)
+}
