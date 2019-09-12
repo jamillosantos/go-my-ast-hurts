@@ -16,6 +16,13 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// Test is a model.
+type Test struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	Email     string    `json:"email"`
+}
+
 /* this is a func */
 func test(t int) {
 	fmt.Println(t)
