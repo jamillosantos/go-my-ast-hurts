@@ -94,6 +94,6 @@ type Package struct {
 	Files       []*File
 }
 
-type Definitions struct {
+type Environment struct {
 	Packages []*Package
 }

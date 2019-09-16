@@ -1,11 +1,9 @@
 package myasthurts_test
 
 import (
-	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,9 +11,24 @@ import (
 
 var _ = Describe("My AST Hurts", func() {
 
+	It("should test something", func() {
+		fset := token.NewFileSet()
+		f, err := parser.ParseFile(fset, "data/models1.sample", nil, parser.AllErrors)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(f).ToNot(BeNil())
+		Expect(f.Decls).ToNot(BeNil())
+
+		ast.Print(fset, f)
+
+		//var env *myasthurts.Environment
+
+		//myasthurts.Parse(f, env)
+
+	})
+
 	It("should test somethhing", func() {
 
-		fset := token.NewFileSet()
+		/*fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, "data/models1.sample", nil, parser.AllErrors)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(f).ToNot(BeNil())
@@ -33,10 +46,16 @@ var _ = Describe("My AST Hurts", func() {
 				}
 
 				for _, fieldList := range s.Fields.List {
+
+					if fieldList.Names[0].Name == "ID" {
+						fieldList.Tag.Value = fmt.Sprintf("%s", "`json:\"IDTestChange\"`")
+					}
+
 					fmt.Printf("%s %s %s\n", fieldList.Names[0], fieldList.Type, fieldList.Tag.Value)
+
 				}
 
-				/*for _, field := range s.Fields.List {
+				for _, field := range s.Fields.List {
 					typeExpr := field.Type
 
 					start := typeExpr.Pos() - 1
@@ -45,10 +64,9 @@ var _ = Describe("My AST Hurts", func() {
 					typeInSource := src[start:end]
 
 					fmt.Println(typeInSource)
-				}*/
-
-				fmt.Println(f.Scope.String())
+				}
 			case *ast.FuncDecl:
+				fmt.Println("---------- Reading FuncDecl ----------")
 				s, ok := x.(*ast.FuncDecl)
 				if !ok {
 					break
@@ -71,6 +89,21 @@ var _ = Describe("My AST Hurts", func() {
 			}
 			return true
 		})
+
+		fmt.Println("---------- Scope ----------")
+
+		fmt.Println(f.Scope.String())
+
+		fmt.Println(f.Scope.Objects["Test"].Pos())
+
+		fmt.Printf("%s\n", fset.Position(f.Scope.Objects["Test"].Pos()))
+
+		fmt.Println("---------- Change field ----------")
+
+		cc := reflect.TypeOf(f.Scope.Objects["User"])
+		//f1 := cc.Field(0)
+
+		fmt.Println(cc)*/
 
 	})
 })

@@ -1,5 +1,10 @@
 package myasthurts
 
-func Parse(definitions *Definitions) {
+import (
+	"fmt"
+	"go/ast"
+)
 
+func Parse(file *ast.File, definitions *Environment) {
+	fmt.Println(file)
 }
