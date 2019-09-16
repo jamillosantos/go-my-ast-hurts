@@ -14,6 +14,7 @@ import (
 var _ = Describe("My AST Hurts", func() {
 
 	It("should test somethhing", func() {
+
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, "data/models1.sample", nil, parser.AllErrors)
 		Expect(err).ToNot(HaveOccurred())
@@ -31,11 +32,22 @@ var _ = Describe("My AST Hurts", func() {
 					break
 				}
 
-				for _, field := range s.Fields.List {
-					fmt.Printf("%s %s %s\n", field.Names[0], field.Type, field.Tag.Value)
+				for _, fieldList := range s.Fields.List {
+					fmt.Printf("%s %s %s\n", fieldList.Names[0], fieldList.Type, fieldList.Tag.Value)
 				}
 
-				fmt.Println()
+				/*for _, field := range s.Fields.List {
+					typeExpr := field.Type
+
+					start := typeExpr.Pos() - 1
+					end := typeExpr.End() - 1
+
+					typeInSource := src[start:end]
+
+					fmt.Println(typeInSource)
+				}*/
+
+				fmt.Println(f.Scope.String())
 			case *ast.FuncDecl:
 				s, ok := x.(*ast.FuncDecl)
 				if !ok {
