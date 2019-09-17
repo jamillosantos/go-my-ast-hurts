@@ -1,10 +1,10 @@
 package myasthurts_test
 
 import (
-	"go/ast"
 	"go/parser"
 	"go/token"
 
+	myasthurts "github.com/jamillosantos/go-my-ast-hurts"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -18,11 +18,11 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(f).ToNot(BeNil())
 		Expect(f.Decls).ToNot(BeNil())
 
-		ast.Print(fset, f)
+		//ast.Print(fset, f)
 
-		//var env *myasthurts.Environment
+		var env *myasthurts.Environment
 
-		//myasthurts.Parse(f, env)
+		myasthurts.Parse(f, env)
 
 	})
 
