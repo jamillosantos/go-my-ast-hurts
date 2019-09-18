@@ -65,7 +65,7 @@ type StructMethod struct {
 type Struct struct {
 	Name       string
 	Comment    string
-	Fields     Field
+	Fields     []*Field
 	Method     []*StructMethod
 	Interfaces []*Interface
 }
@@ -82,16 +82,17 @@ type File struct {
 }
 
 type Package struct {
-	Parent      *Package
-	Subpackages []*Package
-	Directory   string
 	Name        string
 	Comment     string
+	Directory   string
 	Variables   []*Variable
 	Constants   []*Constant
+	Methods     []*MethodDescriptor
 	Structs     []*Struct
 	Interfaces  []*Interface
 	Files       []*File
+	Parent      *Package
+	Subpackages []*Package
 }
 
 type Environment struct {

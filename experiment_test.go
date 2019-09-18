@@ -11,24 +11,53 @@ import (
 
 var _ = Describe("My AST Hurts", func() {
 
-	It("should test something", func() {
+	It("should parse a User struct", func() {
 		fset := token.NewFileSet()
-		f, err := parser.ParseFile(fset, "data/models1.sample", nil, parser.AllErrors)
+		f, err := parser.ParseFile(fset, "data/models2.sample", nil, parser.AllErrors)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(f).ToNot(BeNil())
 		Expect(f.Decls).ToNot(BeNil())
 
-		//ast.Print(fset, f)
-
-		var env *myasthurts.Environment
-
+		env := &myasthurts.Environment{}
 		myasthurts.Parse(f, env)
+
+		// ---------- Test User struct - models2.sample ----------
+		Expect(env.Packages).To(HaveLen(1))
+		Expect(env.Packages[0].Structs).To(HaveLen(1))
+
+		s := env.Packages[0].Structs[0]
+
+		Expect(s.Name).To(Equal("User"))
+		Expect(s.Fields).To(HaveLen(6))
+		//Expect(s.Comment).To(Equal("User is a model.")) TODO
+	})
+
+	// This test depend "should parse a User struct"
+	It("should parse fields of User struct", func() {
+		fset := token.NewFileSet()
+		f, err := parser.ParseFile(fset, "data/models2.sample", nil, parser.AllErrors)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(f).ToNot(BeNil())
+		Expect(f.Decls).ToNot(BeNil())
+
+		env := &myasthurts.Environment{}
+		myasthurts.Parse(f, env)
+
+		// ---------- Test User struct - models2.sample ----------
+		fields := env.Packages[0].Structs[0].Fields
+
+		Expect(fields[0].Name).To(Equal("ID"))
+		Expect(fields[1].Name).To(Equal("Name"))
+		Expect(fields[2].Name).To(Equal("Email"))
+		Expect(fields[3].Name).To(Equal("Password"))
+		Expect(fields[4].Name).To(Equal("CreatedAt"))
+		Expect(fields[5].Name).To(Equal("UpdatedAt"))
 
 	})
 
-	It("should test somethhing", func() {
+	/*It("should test somethhing", func() {
 
-		/*fset := token.NewFileSet()
+		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, "data/models1.sample", nil, parser.AllErrors)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(f).ToNot(BeNil())
@@ -55,7 +84,7 @@ var _ = Describe("My AST Hurts", func() {
 
 				}
 
-				for _, field := range s.Fields.List {
+				/*for _, field := range s.Fields.List {
 					typeExpr := field.Type
 
 					start := typeExpr.Pos() - 1
@@ -103,9 +132,9 @@ var _ = Describe("My AST Hurts", func() {
 		cc := reflect.TypeOf(f.Scope.Objects["User"])
 		//f1 := cc.Field(0)
 
-		fmt.Println(cc)*/
+		fmt.Println(cc)
 
-	})
+	})*/
 })
 
 /*

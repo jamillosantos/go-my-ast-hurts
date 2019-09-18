@@ -23,6 +23,10 @@ type Test struct {
 	Email     string    `json:"email"`
 }
 
+func (u *User) Address() string {
+	return fmt.Sprintf("<%s> %s", u.Name, u.Email)
+}
+
 /* this is a func */
 func test(t int) {
 	fmt.Println(t)
@@ -31,5 +35,6 @@ func test(t int) {
 
 /* this is a func */
 func test_1(t int, a string) {
-	fmt.Println(t + a)
+	fmt.Println(a)
+	fmt.Println(t)
 }
