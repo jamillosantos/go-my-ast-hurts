@@ -37,11 +37,11 @@ func parseSpec(parent *Package, spec ast.Spec) {
 			declStruct := &Struct{}
 			declStruct.Name = s.Name.Name
 
-			fmt.Println(s.Comment.Text())
-
 			parseStruct(parent, t, declStruct)
 			parent.Structs = append(parent.Structs, declStruct)
 		}
+	case *ast.ValueSpec:
+		parseVariable(parent, s)
 	}
 }
 
@@ -71,11 +71,32 @@ func parseFuncDecl(parent *Package, f *ast.FuncDecl) {
 	method := &MethodDescriptor{}
 	method.Name = f.Name.Name
 
+	if f.Recv != nil {
+		structMethod := &StructMethod{}
+		recvList := f.Recv.List
+		for _, field := range recvList {
+			recv := MethodArgument{}
+			recv.Name = field.Names[0].Name
+			recv.Type = field.Type.(*ast.StarExpr).X.(*ast.Ident).Name //TODO(check): I don't know if this pointers always will exist if "f.Recv" is diff than nil.
+			method.Recv = append(method.Recv, recv)
+		}
+
+		structMethod.Descriptor = method
+		for _, s := range parent.Structs { //TODO(enhancement): Is possible than the Struct has not been read before func.
+			if s.Name == method.Recv[0].Type {
+				s.Methods = append(s.Methods, structMethod)
+				break
+			}
+		}
+
+	}
+
 	for _, field := range f.Type.Params.List {
 		argument := MethodArgument{}
 		if len(field.Names) > 0 {
 			argument.Name = field.Names[0].Name
 		}
+
 		t, ok := field.Type.(*ast.Ident)
 		if !ok {
 			fmt.Println("Treta")
@@ -85,4 +106,29 @@ func parseFuncDecl(parent *Package, f *ast.FuncDecl) {
 		method.Arguments = append(method.Arguments, argument)
 	}
 	parent.Methods = append(parent.Methods, method)
+}
+
+func parseVariable(parent *Package, f *ast.ValueSpec) {
+	variable := &Variable{}
+	varType := &Type{}
+	varType.Package = parent
+
+	variable.Name = f.Names[0].Name
+
+	if f.Names == nil {
+		varType.Name = f.Type.(*ast.Ident).Name
+		variable.Type = varType
+	} else {
+		for _, value := range f.Values {
+			switch v := value.(type) {
+			case *ast.BasicLit:
+				//varType.Name = TODO: Set values
+				fmt.Printf("%T\n", v.Kind) //TODO: Convert token.token to string
+			case *ast.Ident:
+				//varType.Name = TODO: Set values
+				fmt.Printf("%T\n", v.Name)
+			}
+		}
+	}
+
 }

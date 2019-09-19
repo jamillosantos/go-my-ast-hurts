@@ -39,6 +39,7 @@ type MethodResult struct {
 type MethodDescriptor struct {
 	Name      string
 	Comment   string
+	Recv      []MethodArgument
 	Arguments []MethodArgument
 	Result    []MethodResult
 	Tag       Tag
@@ -58,7 +59,7 @@ type Field struct {
 }
 
 type StructMethod struct {
-	Descriptor MethodDescriptor
+	Descriptor *MethodDescriptor
 	// TODO
 }
 
@@ -66,7 +67,7 @@ type Struct struct {
 	Name       string
 	Comment    string
 	Fields     []*Field
-	Method     []*StructMethod
+	Methods    []*StructMethod
 	Interfaces []*Interface
 }
 

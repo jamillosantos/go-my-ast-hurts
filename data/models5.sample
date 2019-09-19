@@ -1,0 +1,14 @@
+// Package models is a test
+package models
+
+// variables
+var (
+	a string 
+	b int
+	c bool
+	d = "Olá"
+	e = 64
+	f = true
+	g User
+	h = User{Name: "Teste"}
+)
