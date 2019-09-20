@@ -3,6 +3,8 @@ package myasthurts
 import (
 	"fmt"
 	"go/ast"
+
+	"github.com/fatih/structtag"
 )
 
 func Parse(file *ast.File, definitions *Environment) {
@@ -49,7 +51,8 @@ func parseStruct(parent *Package, astStruct *ast.StructType, typeStruct *Struct)
 
 	for _, field := range astStruct.Fields.List {
 		f := &Field{}
-		//tp := &TagParam{}
+		f.Tag.Raw = ""
+		f.Comment = field.Comment.Text()
 
 		if len(field.Names) > 0 { // TODO(jack): To check/understand multiple names.
 			f.Name = field.Names[0].Name
@@ -58,11 +61,35 @@ func parseStruct(parent *Package, astStruct *ast.StructType, typeStruct *Struct)
 		// TODO(jack): To parse the type.
 		// f.Type
 
-		// TODO(jack): To parse the tag.
-		f.Tag.Raw = field.Tag.Value
+		if field.Tag != nil && field.Tag.Value != "" {
+			f.Tag.Raw = field.Tag.Value[1 : len(field.Tag.Value)-1]
+			tp := &TagParam{}
 
-		f.Comment = field.Comment.Text()
+			structTag, err := structtag.Parse(f.Tag.Raw)
+			if err != nil {
+				fmt.Println("Error in format StructTag.")
+				panic(err)
+			}
 
+			jsonTag, err := structTag.Get("json")
+			if err != nil {
+				fmt.Println("Error in parse StructTag.")
+				panic(err)
+			}
+
+			size := len(jsonTag.Options)
+
+			tp.Name = jsonTag.Key
+			tp.Value = jsonTag.Name
+			tp.Options = make([]string, size)
+
+			if size != 0 {
+				for i := 0; i < size; i++ {
+					tp.Options[i] = jsonTag.Options[i]
+				}
+			}
+			f.Tag.Params = append(f.Tag.Params, *tp)
+		}
 		typeStruct.Fields = append(typeStruct.Fields, f)
 	}
 }

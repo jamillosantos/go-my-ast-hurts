@@ -8,11 +8,11 @@ import (
 // User is a model.
 type User struct {
 	ID        int64     `json:"id,uuidTest"`
-	Name      string    `json:"name"`
+	Name      string    `json:"name" bson:""`
 	Email     string    `json:"email"`
 	Password  string    `json:"password,old,newTest,moreField"`
 	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	UpdatedAt time.Time
 }
 
 // Test is a model.

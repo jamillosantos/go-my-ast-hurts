@@ -3,7 +3,6 @@ package myasthurts_test
 import (
 	"go/parser"
 	"go/token"
-	"strings"
 	"time"
 
 	"github.com/fatih/structtag"
@@ -190,17 +189,16 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(structUser[2].Tag.Raw).ToNot(BeNil())
 		Expect(structUser[3].Tag.Raw).ToNot(BeNil())
 		Expect(structUser[4].Tag.Raw).ToNot(BeNil())
-		Expect(structUser[5].Tag.Raw).ToNot(BeNil())
+		Expect(structUser[5].Tag.Raw).To(Equal(""))
 
-		Expect(structUser[0].Tag.Raw).To(Equal("`json:\"id,uuidTest\"`"))
-		Expect(structUser[1].Tag.Raw).To(Equal("`json:\"name\"`"))
-		Expect(structUser[2].Tag.Raw).To(Equal("`json:\"email\"`"))
-		Expect(structUser[3].Tag.Raw).To(Equal("`json:\"password,old,newTest,moreField\"`"))
-		Expect(structUser[4].Tag.Raw).To(Equal("`json:\"created_at\"`"))
-		Expect(structUser[5].Tag.Raw).To(Equal("`json:\"updated_at\"`"))
+		Expect(structUser[0].Tag.Raw).To(Equal("json:\"id,uuidTest\""))
+		Expect(structUser[1].Tag.Raw).To(Equal("json:\"name\" bson:\"\""))
+		Expect(structUser[2].Tag.Raw).To(Equal("json:\"email\""))
+		Expect(structUser[3].Tag.Raw).To(Equal("json:\"password,old,newTest,moreField\""))
+		Expect(structUser[4].Tag.Raw).To(Equal("json:\"created_at\""))
 
 		// ----------- Test Tag with value ID
-		structUserTagId, err := structtag.Parse(strings.ReplaceAll(string(structUser[0].Tag.Raw), "`", ""))
+		structUserTagId, err := structtag.Parse(structUser[0].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(structUserTagId.Tags()).To(HaveLen(1))
 
@@ -212,18 +210,25 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(getStructUserTagId.Options[0]).To(Equal("uuidTest"))
 
 		// ----------- Test Tag with value Name
-		structUserTagName, err := structtag.Parse(strings.ReplaceAll(string(structUser[1].Tag.Raw), "`", ""))
+		structUserTagName, err := structtag.Parse(structUser[1].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(structUserTagName.Tags()).To(HaveLen(1))
+		Expect(structUserTagName.Tags()).To(HaveLen(2))
 
 		getStructUserTagName, err := structUserTagName.Get("json")
 		Expect(err).ToNot(HaveOccurred())
+		getStructUserTagNameBson, err := structUserTagName.Get("bson")
+		Expect(err).ToNot(HaveOccurred())
+
 		Expect(getStructUserTagName.Key).To(Equal("json"))
 		Expect(getStructUserTagName.Name).To(Equal("name"))
 		Expect(getStructUserTagName.Options).To(HaveLen(0))
 
+		Expect(getStructUserTagNameBson.Key).To(Equal("bson"))
+		Expect(getStructUserTagNameBson.Name).To(Equal(""))
+		Expect(getStructUserTagNameBson.Options).To(HaveLen(0))
+
 		// ----------- Test Tag with value Email
-		structUserTagEmail, err := structtag.Parse(strings.ReplaceAll(string(structUser[2].Tag.Raw), "`", ""))
+		structUserTagEmail, err := structtag.Parse(structUser[2].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(structUserTagEmail.Tags()).To(HaveLen(1))
 
@@ -234,9 +239,16 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(getStructUserTagEmail.Options).To(HaveLen(0))
 
 		// ----------- Test Tag with value Password
-		structUserTagPassword, err := structtag.Parse(strings.ReplaceAll(string(structUser[3].Tag.Raw), "`", ""))
+		structUserTagPassword, err := structtag.Parse(structUser[3].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(structUserTagPassword.Tags()).To(HaveLen(1))
+		Expect(structUser[3].Tag.Params).To(HaveLen(1))
+
+		Expect(structUser[3].Tag.Params[0].Options).To(HaveLen(3))
+
+		Expect(structUser[3].Tag.Params[0].Options[0]).To(Equal("old"))
+		Expect(structUser[3].Tag.Params[0].Options[1]).To(Equal("newTest"))
+		Expect(structUser[3].Tag.Params[0].Options[2]).To(Equal("moreField"))
 
 		getStructUserTagPassword, err := structUserTagPassword.Get("json")
 		Expect(err).ToNot(HaveOccurred())
@@ -244,12 +256,12 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(getStructUserTagPassword.Name).To(Equal("password"))
 		Expect(getStructUserTagPassword.Options).To(HaveLen(3))
 
-		Expect(getStructUserTagPassword.Options[0]).To(Equal("old"))
-		Expect(getStructUserTagPassword.Options[1]).To(Equal("newTest"))
-		Expect(getStructUserTagPassword.Options[2]).To(Equal("moreField"))
+		Expect(structUser[3].Tag.Params[0].Options[0]).To(Equal(getStructUserTagPassword.Options[0]))
+		Expect(structUser[3].Tag.Params[0].Options[1]).To(Equal(getStructUserTagPassword.Options[1]))
+		Expect(structUser[3].Tag.Params[0].Options[2]).To(Equal(getStructUserTagPassword.Options[2]))
 
 		// ----------- Test Tag with value created_at
-		structUserTagCreated_at, err := structtag.Parse(strings.ReplaceAll(string(structUser[4].Tag.Raw), "`", ""))
+		structUserTagCreated_at, err := structtag.Parse(structUser[4].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(structUserTagCreated_at.Tags()).To(HaveLen(1))
 
@@ -260,24 +272,18 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(getStructUserTagCreated_at.Options).To(HaveLen(0))
 
 		// ----------- Test Tag with value updated_at
-		structUserTagUpdated_at, err := structtag.Parse(strings.ReplaceAll(string(structUser[5].Tag.Raw), "`", ""))
+		structUserTagUpdated_at, err := structtag.Parse(structUser[5].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(structUserTagUpdated_at.Tags()).To(HaveLen(1))
-
-		getStructUserTagUpdated_at, err := structUserTagUpdated_at.Get("json")
-		Expect(err).ToNot(HaveOccurred())
-		Expect(getStructUserTagUpdated_at.Key).To(Equal("json"))
-		Expect(getStructUserTagUpdated_at.Name).To(Equal("updated_at"))
-		Expect(getStructUserTagUpdated_at.Options).To(HaveLen(0))
+		Expect(structUserTagUpdated_at.Tags()).To(HaveLen(0))
 
 		// ---------- Test Struct tag from struct Test ----------
 
-		Expect(structTest[0].Tag.Raw).To(Equal("`json:\"id\"`"))
-		Expect(structTest[1].Tag.Raw).To(Equal("`json:\"name\"`"))
-		Expect(structTest[2].Tag.Raw).To(Equal("`json:\"email\"`"))
+		Expect(structTest[0].Tag.Raw).To(Equal("json:\"id\""))
+		Expect(structTest[1].Tag.Raw).To(Equal("json:\"name\""))
+		Expect(structTest[2].Tag.Raw).To(Equal("json:\"email\""))
 
 		// ----------- Test Tag with value ID
-		structTestTagId, err := structtag.Parse(strings.ReplaceAll(string(structTest[0].Tag.Raw), "`", ""))
+		structTestTagId, err := structtag.Parse(structTest[0].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(structTestTagId.Tags()).To(HaveLen(1))
 
@@ -288,7 +294,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(getStructTestTagId.Options).To(HaveLen(0))
 
 		// ----------- Test Tag with value Name
-		structTestTagName, err := structtag.Parse(strings.ReplaceAll(string(structTest[1].Tag.Raw), "`", ""))
+		structTestTagName, err := structtag.Parse(structTest[1].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(structTestTagName.Tags()).To(HaveLen(1))
 
@@ -299,7 +305,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(getStructTestTagName.Options).To(HaveLen(0))
 
 		// ----------- Test Tag with value Email
-		structTestTagEmail, err := structtag.Parse(strings.ReplaceAll(string(structTest[2].Tag.Raw), "`", ""))
+		structTestTagEmail, err := structtag.Parse(structTest[2].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(structTestTagEmail.Tags()).To(HaveLen(1))
 

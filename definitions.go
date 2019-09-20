@@ -22,8 +22,9 @@ type MethodArgument struct {
 }
 
 type TagParam struct {
-	Name  string
-	Value string
+	Name    string
+	Value   string
+	Options []string
 }
 
 type Tag struct {
