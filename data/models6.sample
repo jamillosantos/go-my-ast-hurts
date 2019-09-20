@@ -1,0 +1,23 @@
+// Package models is a test
+package models
+
+import (
+	"time"
+)
+
+// User is a model.
+type User struct {
+	ID        int64     `json:"id,uuidTest"`
+	Name      string    `json:"name"`
+	Email     string    `json:"email"`
+	Password  string    `json:"password,old,newTest,moreField"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// Test is a model.
+type Test struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	Email     string    `json:"email"`
+}

@@ -119,7 +119,7 @@ func parseVariable(parent *Package, f *ast.ValueSpec) {
 		varType.Name = f.Type.(*ast.Ident).Name
 		variable.Type = varType
 	} else {
-		for _, value := range f.Values {
+		/*for _, value := range f.Values {
 			switch v := value.(type) {
 			case *ast.BasicLit:
 				//varType.Name = TODO: Set values
@@ -128,7 +128,7 @@ func parseVariable(parent *Package, f *ast.ValueSpec) {
 				//varType.Name = TODO: Set values
 				fmt.Printf("%T\n", v.Name)
 			}
-		}
+		}*/
 	}
 
 }
