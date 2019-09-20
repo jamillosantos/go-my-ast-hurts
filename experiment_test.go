@@ -184,7 +184,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(structTest[1].Name).To(Equal("Name"))
 		Expect(structTest[2].Name).To(Equal("Email"))
 
-		// ---------- Tests Tags tags ----------
+		// ---------- Tests struct tags from struct User ----------
 		Expect(structUser[0].Tag.Raw).ToNot(BeNil())
 		Expect(structUser[1].Tag.Raw).ToNot(BeNil())
 		Expect(structUser[2].Tag.Raw).ToNot(BeNil())
@@ -269,6 +269,46 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(getStructUserTagUpdated_at.Key).To(Equal("json"))
 		Expect(getStructUserTagUpdated_at.Name).To(Equal("updated_at"))
 		Expect(getStructUserTagUpdated_at.Options).To(HaveLen(0))
+
+		// ---------- Test Struct tag from struct Test ----------
+
+		Expect(structTest[0].Tag.Raw).To(Equal("`json:\"id\"`"))
+		Expect(structTest[1].Tag.Raw).To(Equal("`json:\"name\"`"))
+		Expect(structTest[2].Tag.Raw).To(Equal("`json:\"email\"`"))
+
+		// ----------- Test Tag with value ID
+		structTestTagId, err := structtag.Parse(strings.ReplaceAll(string(structTest[0].Tag.Raw), "`", ""))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(structTestTagId.Tags()).To(HaveLen(1))
+
+		getStructTestTagId, err := structTestTagId.Get("json")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(getStructTestTagId.Key).To(Equal("json"))
+		Expect(getStructTestTagId.Name).To(Equal("id"))
+		Expect(getStructTestTagId.Options).To(HaveLen(0))
+
+		// ----------- Test Tag with value Name
+		structTestTagName, err := structtag.Parse(strings.ReplaceAll(string(structTest[1].Tag.Raw), "`", ""))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(structTestTagName.Tags()).To(HaveLen(1))
+
+		getStructTestTagName, err := structTestTagName.Get("json")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(getStructTestTagName.Key).To(Equal("json"))
+		Expect(getStructTestTagName.Name).To(Equal("name"))
+		Expect(getStructTestTagName.Options).To(HaveLen(0))
+
+		// ----------- Test Tag with value Email
+		structTestTagEmail, err := structtag.Parse(strings.ReplaceAll(string(structTest[2].Tag.Raw), "`", ""))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(structTestTagEmail.Tags()).To(HaveLen(1))
+
+		getStructTestTagEmail, err := structTestTagEmail.Get("json")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(getStructTestTagEmail.Key).To(Equal("json"))
+		Expect(getStructTestTagEmail.Name).To(Equal("email"))
+		Expect(getStructTestTagEmail.Options).To(HaveLen(0))
+
 	})
 
 })
