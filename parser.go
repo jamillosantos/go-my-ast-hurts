@@ -36,11 +36,14 @@ func parseSpec(parent *Package, spec ast.Spec) {
 	case *ast.TypeSpec:
 		switch t := s.Type.(type) {
 		case *ast.StructType:
-			declStruct := &Struct{}
-			declStruct.Name = s.Name.Name
+			declStruct := NewStruct(parent, s.Name.Name)
+			refType := getRefType(parent, s.Name.Name)
 
 			parseStruct(parent, t, declStruct)
+
+			refType.Type = append(refType.Type, declStruct)
 			parent.Structs = append(parent.Structs, declStruct)
+			parent.Types = append(parent.Types, declStruct)
 		}
 	case *ast.ValueSpec:
 		parseVariable(parent, s)
@@ -50,16 +53,24 @@ func parseSpec(parent *Package, spec ast.Spec) {
 func parseStruct(parent *Package, astStruct *ast.StructType, typeStruct *Struct) {
 
 	for _, field := range astStruct.Fields.List {
+		refType := &RefType{}
+
+		switch t := field.Type.(type) {
+		case *ast.Ident:
+			refType = getRefType(parent, t.Name)
+		case *ast.SelectorExpr:
+			refType = getRefType(parent, t.X.(*ast.Ident).Name)
+			//refType.Name = fmt.Sprintf("%s.%s", t.X.(*ast.Ident).Name, t.Sel.Name)
+		}
+
 		f := &Field{}
+		f.Type = refType
 		f.Tag.Raw = ""
 		f.Comment = field.Comment.Text()
 
 		if len(field.Names) > 0 { // TODO(jack): To check/understand multiple names.
 			f.Name = field.Names[0].Name
 		}
-
-		// TODO(jack): To parse the type.
-		// f.Type
 
 		if field.Tag != nil && field.Tag.Value != "" {
 			f.Tag.Raw = field.Tag.Value[1 : len(field.Tag.Value)-1]
@@ -95,22 +106,25 @@ func parseStruct(parent *Package, astStruct *ast.StructType, typeStruct *Struct)
 }
 
 func parseFuncDecl(parent *Package, f *ast.FuncDecl) {
-	method := &MethodDescriptor{}
-	method.Name = f.Name.Name
+	method := NewMethodDescriptor(parent, f.Name.Name)
 
 	if f.Recv != nil {
 		structMethod := &StructMethod{}
 		recvList := f.Recv.List
 		for _, field := range recvList {
 			recv := MethodArgument{}
+			typeName := field.Type.(*ast.StarExpr).X.(*ast.Ident).Name
+			refType := getRefType(parent, typeName)
+			refType.Type = append(refType.Type, method)
+
 			recv.Name = field.Names[0].Name
-			recv.Type = field.Type.(*ast.StarExpr).X.(*ast.Ident).Name //TODO(check): I don't know if this pointers always will exist if "f.Recv" is diff than nil.
+			recv.Type = refType //TODO(check): I don't know if this pointers always will exist if "f.Recv" is diff than nil.
 			method.Recv = append(method.Recv, recv)
 		}
 
 		structMethod.Descriptor = method
 		for _, s := range parent.Structs { //TODO(enhancement): Is possible than the Struct has not been read before func.
-			if s.Name == method.Recv[0].Type {
+			if s.Name() == method.Recv[0].Type.Name {
 				s.Methods = append(s.Methods, structMethod)
 				break
 			}
@@ -129,7 +143,7 @@ func parseFuncDecl(parent *Package, f *ast.FuncDecl) {
 			fmt.Println("Treta")
 			continue
 		}
-		argument.Type = t.Name
+		argument.Type = getRefType(parent, t.Name)
 		method.Arguments = append(method.Arguments, argument)
 	}
 	parent.Methods = append(parent.Methods, method)
@@ -137,8 +151,7 @@ func parseFuncDecl(parent *Package, f *ast.FuncDecl) {
 
 func parseVariable(parent *Package, f *ast.ValueSpec) {
 	variable := &Variable{}
-	varType := &Type{}
-	varType.Package = parent
+	varType := NewRefType(parent)
 
 	variable.Name = f.Names[0].Name
 
@@ -146,7 +159,7 @@ func parseVariable(parent *Package, f *ast.ValueSpec) {
 		varType.Name = f.Type.(*ast.Ident).Name
 		variable.Type = varType
 	} else {
-		/*for _, value := range f.Values {
+		for _, value := range f.Values {
 			switch v := value.(type) {
 			case *ast.BasicLit:
 				//varType.Name = TODO: Set values
@@ -155,7 +168,25 @@ func parseVariable(parent *Package, f *ast.ValueSpec) {
 				//varType.Name = TODO: Set values
 				fmt.Printf("%T\n", v.Name)
 			}
-		}*/
+		}
 	}
+}
 
+//This method is temp.
+func getRefType(parent *Package, name string) *RefType {
+
+	for _, pr := range parent.RefType {
+		if name == pr.Name {
+			for _, t := range pr.Pkg {
+				if parent == t {
+					return pr
+				}
+			}
+		}
+	}
+	ref := &RefType{
+		Name: name,
+	}
+	ref.Pkg = append(ref.Pkg, parent)
+	return ref
 }

@@ -3,7 +3,6 @@ package myasthurts_test
 import (
 	"go/parser"
 	"go/token"
-	"time"
 
 	"github.com/fatih/structtag"
 	myasthurts "github.com/jamillosantos/go-my-ast-hurts"
@@ -30,7 +29,7 @@ var _ = Describe("My AST Hurts", func() {
 
 		s := env.Packages[0].Structs[0]
 
-		Expect(s.Name).To(Equal("User"))
+		Expect(s.Name()).To(Equal("User"))
 		Expect(s.Fields).To(HaveLen(6))
 		Expect(s.Fields).NotTo(BeNil())
 
@@ -59,7 +58,7 @@ var _ = Describe("My AST Hurts", func() {
 		// ---------- Test Function - models3.sample ----------
 		Expect(env.Packages).To(HaveLen(1))
 		Expect(env.Packages[0].Methods).To(HaveLen(1))
-		Expect(env.Packages[0].Methods[0].Name).To(Equal("test_1"))
+		Expect(env.Packages[0].Methods[0].Name()).To(Equal("test_1"))
 		Expect(env.Packages[0].Methods[0].Arguments).To(HaveLen(2))
 
 		Expect(env.Packages[0].Methods[0].Arguments[0].Name).To(Equal("num"))
@@ -69,7 +68,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(env.Packages[0].Methods[0].Arguments[1].Type).To(Equal("string"))
 	})
 
-	It("should parse function in Struct", func() {
+	FIt("should parse function in Struct", func() {
 
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, "data/models4.sample", nil, parser.AllErrors)
@@ -77,6 +76,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(f).ToNot(BeNil())
 		Expect(f.Decls).ToNot(BeNil())
 
+		//ast.Print(fset, f)
 		env := &myasthurts.Environment{}
 		myasthurts.Parse(f, env)
 
@@ -85,13 +85,13 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(env.Packages).To(HaveLen(1))
 		Expect(env.Packages[0].Structs).To(HaveLen(1))
 		Expect(env.Packages[0].Structs[0].Methods).To(HaveLen(2))
-		Expect(env.Packages[0].Structs[0].Methods[0].Descriptor.Name).To(Equal("Address"))
-		Expect(env.Packages[0].Structs[0].Methods[1].Descriptor.Name).To(Equal("ChangePassword"))
+		Expect(env.Packages[0].Structs[0].Methods[0].Descriptor.Name()).To(Equal("Address"))
+		Expect(env.Packages[0].Structs[0].Methods[1].Descriptor.Name()).To(Equal("ChangePassword"))
 
 		Expect(env.Packages[0].Methods).To(HaveLen(2))
 
 		// Check if exist a func Address
-		Expect(env.Packages[0].Methods[0].Name).To(Equal("Address"))
+		Expect(env.Packages[0].Methods[0].Name()).To(Equal("Address"))
 
 		// Check if doesn't exist arguments from func Address
 		Expect(env.Packages[0].Methods[0].Arguments).To(HaveLen(0))
@@ -99,28 +99,28 @@ var _ = Describe("My AST Hurts", func() {
 		// Check if exist all receptors from func Address
 		Expect(env.Packages[0].Methods[0].Recv).To(HaveLen(1))
 		Expect(env.Packages[0].Methods[0].Recv[0].Name).To(Equal("u"))
-		Expect(env.Packages[0].Methods[0].Recv[0].Type).To(Equal("User"))
+		Expect(env.Packages[0].Methods[0].Recv[0].Type.Name).To(Equal("User"))
 
 		// ----- func ChangePassword -----
 
 		// Check if exist a func ChangePassword
-		Expect(env.Packages[0].Methods[1].Name).To(Equal("ChangePassword"))
+		Expect(env.Packages[0].Methods[1].Name()).To(Equal("ChangePassword"))
 
 		// Check if exist all arguments from func ChangePassword
 		Expect(env.Packages[0].Methods[1].Arguments).To(HaveLen(1))
 
 		Expect(env.Packages[0].Methods[1].Arguments[0].Name).To(Equal("new"))
-		Expect(env.Packages[0].Methods[1].Arguments[0].Type).To(Equal("string"))
+		Expect(env.Packages[0].Methods[1].Arguments[0].Type.Name).To(Equal("string"))
 
 		// Check if exist all receptors from func ChangePassword
 		Expect(env.Packages[0].Methods[1].Recv).To(HaveLen(1))
 
 		Expect(env.Packages[0].Methods[1].Recv[0].Name).To(Equal("p"))
-		Expect(env.Packages[0].Methods[1].Recv[0].Type).To(Equal("User"))
+		Expect(env.Packages[0].Methods[1].Recv[0].Type.Name).To(Equal("User"))
 
 	})
 
-	It("should parse the variables", func() {
+	PIt("should parse the variables", func() {
 
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, "data/models5.sample", nil, parser.AllErrors)
@@ -134,15 +134,6 @@ var _ = Describe("My AST Hurts", func() {
 		// ---------- Tests Functions - models5.sample ----------
 		// TODO
 	})
-
-	type User struct {
-		ID        int64     `json:"id"`
-		Name      string    `json:"name"`
-		Email     string    `json:"email"`
-		Password  string    `json:"password"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-	}
 
 	It("should parse struct tags", func() {
 
@@ -160,45 +151,45 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(env.Packages).To(HaveLen(1))
 		Expect(env.Packages[0].Structs).To(HaveLen(2))
 
-		Expect(env.Packages[0].Structs[0].Name).To(Equal("User"))
-		Expect(env.Packages[0].Structs[1].Name).To(Equal("Test"))
+		Expect(env.Packages[0].Structs[0].Name()).To(Equal("User"))
+		Expect(env.Packages[0].Structs[1].Name()).To(Equal("Test"))
 
 		Expect(env.Packages[0].Structs[0].Fields).ToNot(BeNil())
 		Expect(env.Packages[0].Structs[1].Fields).ToNot(BeNil())
 
-		structUser := env.Packages[0].Structs[0].Fields
-		structTest := env.Packages[0].Structs[1].Fields
+		structUserFields := env.Packages[0].Structs[0].Fields
+		structTestFields := env.Packages[0].Structs[1].Fields
 
-		Expect(structUser).To(HaveLen(6))
-		Expect(structTest).To(HaveLen(3))
+		Expect(structUserFields).To(HaveLen(6))
+		Expect(structTestFields).To(HaveLen(3))
 
-		Expect(structUser[0].Name).To(Equal("ID"))
-		Expect(structUser[1].Name).To(Equal("Name"))
-		Expect(structUser[2].Name).To(Equal("Email"))
-		Expect(structUser[3].Name).To(Equal("Password"))
-		Expect(structUser[4].Name).To(Equal("CreatedAt"))
-		Expect(structUser[5].Name).To(Equal("UpdatedAt"))
+		Expect(structUserFields[0].Name).To(Equal("ID"))
+		Expect(structUserFields[1].Name).To(Equal("Name"))
+		Expect(structUserFields[2].Name).To(Equal("Email"))
+		Expect(structUserFields[3].Name).To(Equal("Password"))
+		Expect(structUserFields[4].Name).To(Equal("CreatedAt"))
+		Expect(structUserFields[5].Name).To(Equal("UpdatedAt"))
 
-		Expect(structTest[0].Name).To(Equal("ID"))
-		Expect(structTest[1].Name).To(Equal("Name"))
-		Expect(structTest[2].Name).To(Equal("Email"))
+		Expect(structTestFields[0].Name).To(Equal("ID"))
+		Expect(structTestFields[1].Name).To(Equal("Name"))
+		Expect(structTestFields[2].Name).To(Equal("Email"))
 
 		// ---------- Tests struct tags from struct User ----------
-		Expect(structUser[0].Tag.Raw).ToNot(BeNil())
-		Expect(structUser[1].Tag.Raw).ToNot(BeNil())
-		Expect(structUser[2].Tag.Raw).ToNot(BeNil())
-		Expect(structUser[3].Tag.Raw).ToNot(BeNil())
-		Expect(structUser[4].Tag.Raw).ToNot(BeNil())
-		Expect(structUser[5].Tag.Raw).To(Equal(""))
+		Expect(structUserFields[0].Tag.Raw).ToNot(BeNil())
+		Expect(structUserFields[1].Tag.Raw).ToNot(BeNil())
+		Expect(structUserFields[2].Tag.Raw).ToNot(BeNil())
+		Expect(structUserFields[3].Tag.Raw).ToNot(BeNil())
+		Expect(structUserFields[4].Tag.Raw).ToNot(BeNil())
+		Expect(structUserFields[5].Tag.Raw).To(Equal(""))
 
-		Expect(structUser[0].Tag.Raw).To(Equal("json:\"id,uuidTest\""))
-		Expect(structUser[1].Tag.Raw).To(Equal("json:\"name\" bson:\"\""))
-		Expect(structUser[2].Tag.Raw).To(Equal("json:\"email\""))
-		Expect(structUser[3].Tag.Raw).To(Equal("json:\"password,old,newTest,moreField\""))
-		Expect(structUser[4].Tag.Raw).To(Equal("json:\"created_at\""))
+		Expect(structUserFields[0].Tag.Raw).To(Equal("json:\"id,uuidTest\""))
+		Expect(structUserFields[1].Tag.Raw).To(Equal("json:\"name\" bson:\"\""))
+		Expect(structUserFields[2].Tag.Raw).To(Equal("json:\"email\""))
+		Expect(structUserFields[3].Tag.Raw).To(Equal("json:\"password,old,newTest,moreField\""))
+		Expect(structUserFields[4].Tag.Raw).To(Equal("json:\"created_at\""))
 
 		// ----------- Test Tag with value ID
-		structUserTagId, err := structtag.Parse(structUser[0].Tag.Raw)
+		structUserTagId, err := structtag.Parse(structUserFields[0].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(structUserTagId.Tags()).To(HaveLen(1))
 
@@ -210,7 +201,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(getStructUserTagId.Options[0]).To(Equal("uuidTest"))
 
 		// ----------- Test Tag with value Name
-		structUserTagName, err := structtag.Parse(structUser[1].Tag.Raw)
+		structUserTagName, err := structtag.Parse(structUserFields[1].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(structUserTagName.Tags()).To(HaveLen(2))
 
@@ -228,7 +219,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(getStructUserTagNameBson.Options).To(HaveLen(0))
 
 		// ----------- Test Tag with value Email
-		structUserTagEmail, err := structtag.Parse(structUser[2].Tag.Raw)
+		structUserTagEmail, err := structtag.Parse(structUserFields[2].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(structUserTagEmail.Tags()).To(HaveLen(1))
 
@@ -239,16 +230,16 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(getStructUserTagEmail.Options).To(HaveLen(0))
 
 		// ----------- Test Tag with value Password
-		structUserTagPassword, err := structtag.Parse(structUser[3].Tag.Raw)
+		structUserTagPassword, err := structtag.Parse(structUserFields[3].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(structUserTagPassword.Tags()).To(HaveLen(1))
-		Expect(structUser[3].Tag.Params).To(HaveLen(1))
+		Expect(structUserFields[3].Tag.Params).To(HaveLen(1))
 
-		Expect(structUser[3].Tag.Params[0].Options).To(HaveLen(3))
+		Expect(structUserFields[3].Tag.Params[0].Options).To(HaveLen(3))
 
-		Expect(structUser[3].Tag.Params[0].Options[0]).To(Equal("old"))
-		Expect(structUser[3].Tag.Params[0].Options[1]).To(Equal("newTest"))
-		Expect(structUser[3].Tag.Params[0].Options[2]).To(Equal("moreField"))
+		Expect(structUserFields[3].Tag.Params[0].Options[0]).To(Equal("old"))
+		Expect(structUserFields[3].Tag.Params[0].Options[1]).To(Equal("newTest"))
+		Expect(structUserFields[3].Tag.Params[0].Options[2]).To(Equal("moreField"))
 
 		getStructUserTagPassword, err := structUserTagPassword.Get("json")
 		Expect(err).ToNot(HaveOccurred())
@@ -256,12 +247,12 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(getStructUserTagPassword.Name).To(Equal("password"))
 		Expect(getStructUserTagPassword.Options).To(HaveLen(3))
 
-		Expect(structUser[3].Tag.Params[0].Options[0]).To(Equal(getStructUserTagPassword.Options[0]))
-		Expect(structUser[3].Tag.Params[0].Options[1]).To(Equal(getStructUserTagPassword.Options[1]))
-		Expect(structUser[3].Tag.Params[0].Options[2]).To(Equal(getStructUserTagPassword.Options[2]))
+		Expect(structUserFields[3].Tag.Params[0].Options[0]).To(Equal(getStructUserTagPassword.Options[0]))
+		Expect(structUserFields[3].Tag.Params[0].Options[1]).To(Equal(getStructUserTagPassword.Options[1]))
+		Expect(structUserFields[3].Tag.Params[0].Options[2]).To(Equal(getStructUserTagPassword.Options[2]))
 
 		// ----------- Test Tag with value created_at
-		structUserTagCreated_at, err := structtag.Parse(structUser[4].Tag.Raw)
+		structUserTagCreated_at, err := structtag.Parse(structUserFields[4].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(structUserTagCreated_at.Tags()).To(HaveLen(1))
 
@@ -272,18 +263,18 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(getStructUserTagCreated_at.Options).To(HaveLen(0))
 
 		// ----------- Test Tag with value updated_at
-		structUserTagUpdated_at, err := structtag.Parse(structUser[5].Tag.Raw)
+		structUserTagUpdated_at, err := structtag.Parse(structUserFields[5].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(structUserTagUpdated_at.Tags()).To(HaveLen(0))
 
 		// ---------- Test Struct tag from struct Test ----------
 
-		Expect(structTest[0].Tag.Raw).To(Equal("json:\"id\""))
-		Expect(structTest[1].Tag.Raw).To(Equal("json:\"name\""))
-		Expect(structTest[2].Tag.Raw).To(Equal("json:\"email\""))
+		Expect(structTestFields[0].Tag.Raw).To(Equal("json:\"id\""))
+		Expect(structTestFields[1].Tag.Raw).To(Equal("json:\"name\""))
+		Expect(structTestFields[2].Tag.Raw).To(Equal("json:\"email\""))
 
 		// ----------- Test Tag with value ID
-		structTestTagId, err := structtag.Parse(structTest[0].Tag.Raw)
+		structTestTagId, err := structtag.Parse(structTestFields[0].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(structTestTagId.Tags()).To(HaveLen(1))
 
@@ -294,7 +285,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(getStructTestTagId.Options).To(HaveLen(0))
 
 		// ----------- Test Tag with value Name
-		structTestTagName, err := structtag.Parse(structTest[1].Tag.Raw)
+		structTestTagName, err := structtag.Parse(structTestFields[1].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(structTestTagName.Tags()).To(HaveLen(1))
 
@@ -305,7 +296,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(getStructTestTagName.Options).To(HaveLen(0))
 
 		// ----------- Test Tag with value Email
-		structTestTagEmail, err := structtag.Parse(structTest[2].Tag.Raw)
+		structTestTagEmail, err := structtag.Parse(structTestFields[2].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(structTestTagEmail.Tags()).To(HaveLen(1))
 

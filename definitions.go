@@ -1,24 +1,111 @@
 package myasthurts
 
-type Type struct {
-	Package *Package
-	Name    string
-	// TODO
+type Type interface {
+	Package() *Package
+	Name() string
+}
+
+type MethodDescriptor struct {
+	pkg       *Package
+	name      string
+	Comment   string
+	Recv      []MethodArgument
+	Arguments []MethodArgument
+	Result    []MethodResult
+	Tag       Tag
+}
+
+func NewMethodDescriptor(pkg *Package, name string) *MethodDescriptor {
+	return &MethodDescriptor{
+		pkg:  pkg,
+		name: name,
+	}
+}
+
+func (method *MethodDescriptor) Package() *Package {
+	return method.pkg
+}
+
+func (method *MethodDescriptor) Name() string {
+	return method.name
+}
+
+type Interface struct {
+	pkg     *Package
+	name    string
+	Methods []MethodDescriptor
+	Comment string
+}
+
+func NewInterface(pkg *Package, name string) *Interface {
+	return &Interface{
+		pkg:  pkg,
+		name: name,
+	}
+}
+
+func (i *Interface) Package() *Package {
+	return i.pkg
+}
+
+func (i *Interface) Name() string {
+	return i.name
+}
+
+type Struct struct {
+	pkg        *Package
+	name       string
+	Comment    string
+	Fields     []*Field
+	Methods    []*StructMethod
+	Interfaces []*Interface
+}
+
+func NewStruct(pkg *Package, name string) *Struct {
+	return &Struct{
+		pkg:  pkg,
+		name: name,
+	}
+}
+
+func (s *Struct) Package() *Package {
+	return s.pkg
+}
+
+func (s *Struct) Name() string {
+	return s.name
 }
 
 type Variable struct {
 	Name string
-	Type *Type
+	Type *RefType
 }
 
 type Constant struct {
 	Name string
-	Type *Type
+	Type Type
 }
 
 type MethodArgument struct {
 	Name string
-	Type string
+	Type *RefType
+}
+
+type RefType struct {
+	Name string
+	Pkg  []*Package
+	Type []Type
+}
+
+func NewRefType(pkg *Package) *RefType {
+	ref := &RefType{}
+	ref.Pkg[0] = pkg
+	return ref
+}
+
+type Tag struct {
+	Raw    string
+	Params []TagParam
 }
 
 type TagParam struct {
@@ -27,34 +114,14 @@ type TagParam struct {
 	Options []string
 }
 
-type Tag struct {
-	Raw    string
-	Params []TagParam
-}
-
 type MethodResult struct {
 	Name string
-	Type *Type
-}
-
-type MethodDescriptor struct {
-	Name      string
-	Comment   string
-	Recv      []MethodArgument
-	Arguments []MethodArgument
-	Result    []MethodResult
-	Tag       Tag
-}
-
-type Interface struct {
-	Name    string
-	Methods []MethodDescriptor
-	Comment string
+	Type Type
 }
 
 type Field struct {
 	Name    string
-	Type    *Type
+	Type    *RefType
 	Tag     Tag
 	Comment string
 }
@@ -62,14 +129,6 @@ type Field struct {
 type StructMethod struct {
 	Descriptor *MethodDescriptor
 	// TODO
-}
-
-type Struct struct {
-	Name       string
-	Comment    string
-	Fields     []*Field
-	Methods    []*StructMethod
-	Interfaces []*Interface
 }
 
 type File struct {
@@ -92,6 +151,8 @@ type Package struct {
 	Methods     []*MethodDescriptor
 	Structs     []*Struct
 	Interfaces  []*Interface
+	RefType     []*RefType
+	Types       []Type
 	Files       []*File
 	Parent      *Package
 	Subpackages []*Package
