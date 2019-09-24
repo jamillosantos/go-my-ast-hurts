@@ -7,59 +7,89 @@ import (
 	"github.com/fatih/structtag"
 )
 
-func Parse(file *ast.File, definitions *Environment) {
+type parseContext struct {
+	File        *ast.File
+	Env         *Environment
+	PackagesMap map[string]*Package
+}
 
-	p := &Package{}
-	p.Name = file.Name.Name
+func Parse(env *Environment, file *ast.File) {
+
+	ctx := &parseContext{
+		File:        file,
+		Env:         env,
+		PackagesMap: make(map[string]*Package),
+	}
+
+	parsePackage(ctx)
 
 	decls := file.Decls
 	for _, d := range decls {
 		switch c := d.(type) {
 		case *ast.GenDecl:
-			parseGenDecl(p, c)
+			parseGenDecl(ctx, c)
 		case *ast.FuncDecl:
-			parseFuncDecl(p, c)
+			parseFuncDecl(ctx, c)
 		}
 	}
-
-	definitions.Packages = append(definitions.Packages, p)
 }
 
-func parseGenDecl(parent *Package, s *ast.GenDecl) {
-	for _, spec := range s.Specs {
-		parseSpec(parent, spec)
+func parsePackage(ctx *parseContext) {
+
+	_, ok := ctx.Env.PackageByName(ctx.File.Name.Name)
+	if !ok {
+		ctx.Env.AppendPackage(&Package{
+			Name: ctx.File.Name.Name,
+		})
+
+		ctx.PackagesMap[ctx.File.Name.Name] = &Package{
+			Name: ctx.File.Name.Name,
+		}
+
 	}
 }
 
-func parseSpec(parent *Package, spec ast.Spec) {
+func parseGenDecl(ctx *parseContext, s *ast.GenDecl) {
+	for _, spec := range s.Specs {
+		parseSpec(ctx, spec)
+	}
+}
+
+func parseSpec(ctx *parseContext, spec ast.Spec) {
+	currentPackage := ctx.PackagesMap[ctx.File.Name.Name]
+
 	switch s := spec.(type) {
 	case *ast.TypeSpec:
 		switch t := s.Type.(type) {
 		case *ast.StructType:
-			declStruct := NewStruct(parent, s.Name.Name)
-			refType := getRefType(parent, s.Name.Name)
+			declStruct := NewStruct(currentPackage, s.Name.Name)
+			refType := getRefType(ctx, s.Name.Name)
+			refType.Type = declStruct
 
-			parseStruct(parent, t, declStruct)
-
-			refType.Type = append(refType.Type, declStruct)
-			parent.Structs = append(parent.Structs, declStruct)
-			parent.Types = append(parent.Types, declStruct)
+			parseStruct(ctx, t, declStruct)
+			currentPackage.Types = append(currentPackage.Types, declStruct)
 		}
+	case *ast.ImportSpec:
+		pkgName := s.Path.Value[1 : len(s.Path.Value)-1]
+		if s.Name != nil {
+			pkgName += fmt.Sprintf(":%s", s.Name.Name)
+		}
+		getRefType(ctx, pkgName)
 	case *ast.ValueSpec:
-		parseVariable(parent, s)
+		parseVariable(currentPackage, s)
 	}
 }
 
-func parseStruct(parent *Package, astStruct *ast.StructType, typeStruct *Struct) {
+func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struct) {
 
 	for _, field := range astStruct.Fields.List {
 		refType := &RefType{}
 
 		switch t := field.Type.(type) {
 		case *ast.Ident:
-			refType = getRefType(parent, t.Name)
+			refType = getRefType(ctx, t.Name)
 		case *ast.SelectorExpr:
-			refType = getRefType(parent, t.X.(*ast.Ident).Name)
+			refType = getRefType(ctx, t.X.(*ast.Ident).Name)
 			//refType.Name = fmt.Sprintf("%s.%s", t.X.(*ast.Ident).Name, t.Sel.Name)
 		}
 
@@ -105,25 +135,24 @@ func parseStruct(parent *Package, astStruct *ast.StructType, typeStruct *Struct)
 	}
 }
 
-func parseFuncDecl(parent *Package, f *ast.FuncDecl) {
-	method := NewMethodDescriptor(parent, f.Name.Name)
+func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) {
+	currentPackage := ctx.PackagesMap[ctx.File.Name.Name]
+	method := NewMethodDescriptor(currentPackage, f.Name.Name)
 
-	if f.Recv != nil {
+	if f.Recv != nil { //TODO(check): I don't know if this pointers always will exist if "f.Recv" is diff than nil.
 		structMethod := &StructMethod{}
 		recvList := f.Recv.List
 		for _, field := range recvList {
 			recv := MethodArgument{}
 			typeName := field.Type.(*ast.StarExpr).X.(*ast.Ident).Name
-			refType := getRefType(parent, typeName)
-			refType.Type = append(refType.Type, method)
 
 			recv.Name = field.Names[0].Name
-			recv.Type = refType //TODO(check): I don't know if this pointers always will exist if "f.Recv" is diff than nil.
+			recv.Type = getRefType(ctx, typeName)
 			method.Recv = append(method.Recv, recv)
 		}
 
 		structMethod.Descriptor = method
-		for _, s := range parent.Structs { //TODO(enhancement): Is possible than the Struct has not been read before func.
+		for _, s := range currentPackage.Structs { //TODO(enhancement): Is possible than the Struct has not been read before func.
 			if s.Name() == method.Recv[0].Type.Name {
 				s.Methods = append(s.Methods, structMethod)
 				break
@@ -143,10 +172,10 @@ func parseFuncDecl(parent *Package, f *ast.FuncDecl) {
 			fmt.Println("Treta")
 			continue
 		}
-		argument.Type = getRefType(parent, t.Name)
+		argument.Type = getRefType(ctx, t.Name)
 		method.Arguments = append(method.Arguments, argument)
 	}
-	parent.Methods = append(parent.Methods, method)
+	currentPackage.Methods = append(currentPackage.Methods, method)
 }
 
 func parseVariable(parent *Package, f *ast.ValueSpec) {
@@ -173,20 +202,23 @@ func parseVariable(parent *Package, f *ast.ValueSpec) {
 }
 
 //This method is temp.
-func getRefType(parent *Package, name string) *RefType {
+func getRefType(ctx *parseContext, nameRef string) *RefType {
+	packageCurrent := ctx.PackagesMap[ctx.File.Name.Name]
 
-	for _, pr := range parent.RefType {
-		if name == pr.Name {
-			for _, t := range pr.Pkg {
-				if parent == t {
-					return pr
-				}
-			}
+	for _, pr := range packageCurrent.RefType {
+		if nameRef == pr.Name && packageCurrent == pr.Pkg {
+			return pr
 		}
 	}
+	return newRefType(packageCurrent, nameRef)
+}
+
+func newRefType(parent *Package, name string) *RefType {
+	fmt.Println(name)
 	ref := &RefType{
 		Name: name,
+		Pkg:  parent,
 	}
-	ref.Pkg = append(ref.Pkg, parent)
+	parent.RefType = append(parent.RefType, ref)
 	return ref
 }

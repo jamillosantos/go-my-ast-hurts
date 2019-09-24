@@ -1,10 +1,11 @@
 package myasthurts_test
 
 import (
+	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
 
-	"github.com/fatih/structtag"
 	myasthurts "github.com/jamillosantos/go-my-ast-hurts"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -12,7 +13,7 @@ import (
 
 var _ = Describe("My AST Hurts", func() {
 
-	It("should parse fields of User struct", func() {
+	FIt("should parse fields of User struct", func() {
 
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, "data/models2.sample", nil, parser.AllErrors)
@@ -20,31 +21,34 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(f).ToNot(BeNil())
 		Expect(f.Decls).ToNot(BeNil())
 
-		env := &myasthurts.Environment{}
-		myasthurts.Parse(f, env)
+		ast.Print(fset, f)
+		env := myasthurts.NewEnvironment()
+		myasthurts.Parse(env, f)
 
 		// ---------- Test User struct - models2.sample ----------
-		Expect(env.Packages).To(HaveLen(1))
-		Expect(env.Packages[0].Structs).To(HaveLen(1))
+		pkg, ok := env.PackageByName("models")
+		fmt.Println(len(pkg.Structs))
+		Expect(ok).To(BeTrue())
+		Expect(pkg.Structs).To(HaveLen(1))
 
-		s := env.Packages[0].Structs[0]
+		/*s := pkg.Structs[0]
 
 		Expect(s.Name()).To(Equal("User"))
 		Expect(s.Fields).To(HaveLen(6))
 		Expect(s.Fields).NotTo(BeNil())
 
-		fields := env.Packages[0].Structs[0].Fields
+		fields := pkg.Structs[0].Fields
 
 		Expect(fields[0].Name).To(Equal("ID"))
 		Expect(fields[1].Name).To(Equal("Name"))
 		Expect(fields[2].Name).To(Equal("Email"))
 		Expect(fields[3].Name).To(Equal("Password"))
 		Expect(fields[4].Name).To(Equal("CreatedAt"))
-		Expect(fields[5].Name).To(Equal("UpdatedAt"))
+		Expect(fields[5].Name).To(Equal("UpdatedAt"))*/
 
 	})
 
-	It("should parse function", func() {
+	/*It("should parse function", func() {
 
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, "data/models3.sample", nil, parser.AllErrors)
@@ -52,8 +56,8 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(f).ToNot(BeNil())
 		Expect(f.Decls).ToNot(BeNil())
 
-		env := &myasthurts.Environment{}
-		myasthurts.Parse(f, env)
+		env := myasthurts.NewEnvironment()
+		myasthurts.Parse(env, f)
 
 		// ---------- Test Function - models3.sample ----------
 		Expect(env.Packages).To(HaveLen(1))
@@ -68,7 +72,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(env.Packages[0].Methods[0].Arguments[1].Type).To(Equal("string"))
 	})
 
-	FIt("should parse function in Struct", func() {
+	It("should parse function in Struct", func() {
 
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, "data/models4.sample", nil, parser.AllErrors)
@@ -77,8 +81,8 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(f.Decls).ToNot(BeNil())
 
 		//ast.Print(fset, f)
-		env := &myasthurts.Environment{}
-		myasthurts.Parse(f, env)
+		env := myasthurts.NewEnvironment()
+		myasthurts.Parse(env, f)
 
 		// ---------- Tests Functions - models4.sample ----------
 
@@ -120,7 +124,7 @@ var _ = Describe("My AST Hurts", func() {
 
 	})
 
-	PIt("should parse the variables", func() {
+	It("should parse the variables", func() {
 
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, "data/models5.sample", nil, parser.AllErrors)
@@ -128,8 +132,8 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(f).ToNot(BeNil())
 		Expect(f.Decls).ToNot(BeNil())
 
-		env := &myasthurts.Environment{}
-		myasthurts.Parse(f, env)
+		env := myasthurts.NewEnvironment()
+		myasthurts.Parse(env, f)
 
 		// ---------- Tests Functions - models5.sample ----------
 		// TODO
@@ -144,8 +148,8 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(f.Decls).ToNot(BeNil())
 
 		//ast.Print(fset, f)
-		env := &myasthurts.Environment{}
-		myasthurts.Parse(f, env)
+		env := myasthurts.NewEnvironment()
+		myasthurts.Parse(env, f)
 
 		// ---------- Tests struct tags - models5.sample ----------
 		Expect(env.Packages).To(HaveLen(1))
@@ -307,5 +311,73 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(getStructTestTagEmail.Options).To(HaveLen(0))
 
 	})
+
+	It("should parse struct and func User", func() {
+		fset := token.NewFileSet()
+		f, err := parser.ParseFile(fset, "data/models7.sample", nil, parser.AllErrors)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(f).ToNot(BeNil())
+		Expect(f.Decls).ToNot(BeNil())
+
+		//ast.Print(fset, f)
+		env := myasthurts.NewEnvironment()
+		myasthurts.Parse(env, f)
+
+		// ---------- Tests struct tags - models7.sample ----------
+
+		Expect(env.Packages).To(HaveLen(1))
+		Expect(env.Packages[0].Name).To(Equal("models"))
+
+		Expect(env.Packages[0].RefType).To(HaveLen(4))
+		Expect(env.Packages[0].RefType[0].Name).To(Equal("User"))
+		Expect(env.Packages[0].RefType[1].Name).To(Equal("int64"))
+		Expect(env.Packages[0].RefType[2].Name).To(Equal("string"))
+		Expect(env.Packages[0].RefType[3].Name).To(Equal("time"))
+
+		Expect(env.Packages[0].RefType[0].Pkg.Name).To(Equal("models"))
+		Expect(env.Packages[0].RefType[1].Pkg.Name).To(Equal("models"))
+		Expect(env.Packages[0].RefType[2].Pkg.Name).To(Equal("models"))
+		Expect(env.Packages[0].RefType[3].Pkg.Name).To(Equal("models"))
+
+		Expect(env.Packages[0].RefType[0].Type).ToNot(BeNil())
+		Expect(env.Packages[0].RefType[0].Type.Name()).To(Equal("User"))
+
+		Expect(env.Packages[0].RefType[1].Type).To(BeNil())
+		Expect(env.Packages[0].RefType[1].Name).To(Equal("int64"))
+
+		Expect(env.Packages[0].RefType[2].Type).To(BeNil())
+		Expect(env.Packages[0].RefType[2].Name).To(Equal("string"))
+
+		Expect(env.Packages[0].RefType[3].Type).To(BeNil())
+		Expect(env.Packages[0].RefType[3].Name).To(Equal("time"))
+
+		Expect(env.Packages[0].Structs).To(HaveLen(1))
+		Expect(env.Packages[0].Structs[0].Name()).To(Equal("User"))
+		Expect(env.Packages[0].Structs[0].Methods).To(HaveLen(1))
+		Expect(env.Packages[0].Structs[0].Methods[0].Descriptor.Name()).To(Equal("getName"))
+
+		Expect(env.Packages[0].Methods).To(HaveLen(1))
+		Expect(env.Packages[0].Methods[0].Name()).To(Equal("getName"))
+		Expect(env.Packages[0].Methods[0].Recv).To(HaveLen(1))
+		Expect(env.Packages[0].Methods[0].Recv[0].Type.Name).To(Equal(env.Packages[0].Structs[0].Name()))
+
+	})
+
+	It("should parse imports", func() {
+		fset := token.NewFileSet()
+		f, err := parser.ParseFile(fset, "data/models8.sample", nil, parser.AllErrors)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(f).ToNot(BeNil())
+		Expect(f.Decls).ToNot(BeNil())
+
+		ast.Print(fset, f)
+		env := myasthurts.NewEnvironment()
+		myasthurts.Parse(env, f)
+
+		// ---------- Tests struct tags - models8.sample ----------
+
+		Expect(env.Packages).To(HaveLen(1))
+
+	})*/
 
 })

@@ -62,10 +62,12 @@ type Struct struct {
 }
 
 func NewStruct(pkg *Package, name string) *Struct {
-	return &Struct{
+	srct := &Struct{
 		pkg:  pkg,
 		name: name,
 	}
+	pkg.AppendStruct(srct)
+	return srct
 }
 
 func (s *Struct) Package() *Package {
@@ -93,14 +95,14 @@ type MethodArgument struct {
 
 type RefType struct {
 	Name string
-	Pkg  []*Package
-	Type []Type
+	Pkg  *Package
+	Type Type
 }
 
 func NewRefType(pkg *Package) *RefType {
-	ref := &RefType{}
-	ref.Pkg[0] = pkg
-	return ref
+	return &RefType{
+		Pkg: pkg,
+	}
 }
 
 type Tag struct {
@@ -158,6 +160,28 @@ type Package struct {
 	Subpackages []*Package
 }
 
+func (p *Package) AppendStruct(s *Struct) {
+	p.Structs = append(p.Structs, s)
+}
+
 type Environment struct {
-	Packages []*Package
+	packages    []*Package
+	packagesMap map[string]*Package
+}
+
+func NewEnvironment() *Environment {
+	return &Environment{
+		packages:    []*Package{},
+		packagesMap: map[string]*Package{},
+	}
+}
+
+func (e *Environment) PackageByName(name string) (*Package, bool) {
+	pkg, ok := e.packagesMap[name]
+	return pkg, ok
+}
+
+func (e *Environment) AppendPackage(pkg *Package) {
+	e.packages = append(e.packages, pkg)
+	e.packagesMap[pkg.Name] = pkg
 }

@@ -1,0 +1,20 @@
+// Package models is a test
+package models
+
+import (
+	"fmt"
+	"test"
+	t "time"
+)
+
+// User is a model.
+type User struct {
+	ID        int64  `json:"id,uuidTest"`
+	Name      string `json:"name" bson:""`
+	CreatedAt t.Time `json:"created_at"`
+}
+
+func (u *User) getName() string {
+	fmt.Println("a")
+	return u.Name
+}
