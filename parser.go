@@ -13,6 +13,11 @@ type parseContext struct {
 	PackagesMap map[string]*Package
 }
 
+func (p *parseContext) PackageByName(name string) (*Package, bool) {
+	pkg, ok := p.PackagesMap[name]
+	return pkg, ok
+}
+
 func Parse(env *Environment, file *ast.File) {
 
 	ctx := &parseContext{
@@ -38,14 +43,11 @@ func parsePackage(ctx *parseContext) {
 
 	_, ok := ctx.Env.PackageByName(ctx.File.Name.Name)
 	if !ok {
-		ctx.Env.AppendPackage(&Package{
-			Name: ctx.File.Name.Name,
-		})
-
-		ctx.PackagesMap[ctx.File.Name.Name] = &Package{
+		pkg := &Package{
 			Name: ctx.File.Name.Name,
 		}
-
+		ctx.Env.AppendPackage(pkg)
+		ctx.PackagesMap[ctx.File.Name.Name] = pkg
 	}
 }
 
@@ -70,11 +72,34 @@ func parseSpec(ctx *parseContext, spec ast.Spec) {
 			currentPackage.Types = append(currentPackage.Types, declStruct)
 		}
 	case *ast.ImportSpec:
-		pkgName := s.Path.Value[1 : len(s.Path.Value)-1]
+		namePkg := s.Path.Value[1 : len(s.Path.Value)-1]
 		if s.Name != nil {
-			pkgName += fmt.Sprintf(":%s", s.Name.Name)
+			_, ok := ctx.PackageByName(s.Name.Name)
+			if !ok {
+				newPkg := &Package{
+					Name: namePkg,
+				}
+				ctx.PackagesMap[s.Name.Name] = newPkg
+				_, ok := ctx.Env.PackageByName(namePkg)
+				if !ok {
+					ctx.Env.AppendPackage(newPkg)
+				}
+			}
+			getRefType(ctx, s.Name.Name)
+		} else {
+			_, ok := ctx.PackageByName(namePkg)
+			if !ok {
+				newPkg := &Package{
+					Name: namePkg,
+				}
+				ctx.PackagesMap[namePkg] = newPkg
+				_, ok := ctx.Env.PackageByName(namePkg)
+				if !ok {
+					ctx.Env.AppendPackage(newPkg)
+				}
+			}
+			getRefType(ctx, namePkg)
 		}
-		getRefType(ctx, pkgName)
 	case *ast.ValueSpec:
 		parseVariable(currentPackage, s)
 	}
@@ -90,7 +115,7 @@ func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struc
 			refType = getRefType(ctx, t.Name)
 		case *ast.SelectorExpr:
 			refType = getRefType(ctx, t.X.(*ast.Ident).Name)
-			//refType.Name = fmt.Sprintf("%s.%s", t.X.(*ast.Ident).Name, t.Sel.Name)
+			//tmpName := fmt.Sprintf("%s:%s", t.X.(*ast.Ident).Name, t.Sel.Name)
 		}
 
 		f := &Field{}
@@ -202,22 +227,21 @@ func parseVariable(parent *Package, f *ast.ValueSpec) {
 }
 
 //This method is temp.
-func getRefType(ctx *parseContext, nameRef string) *RefType {
+func getRefType(ctx *parseContext, name string) *RefType {
 	packageCurrent := ctx.PackagesMap[ctx.File.Name.Name]
 
 	for _, pr := range packageCurrent.RefType {
-		if nameRef == pr.Name && packageCurrent == pr.Pkg {
+		if name == pr.Name && packageCurrent == pr.Pkg {
 			return pr
 		}
 	}
-	return newRefType(packageCurrent, nameRef)
+	return newRefType(packageCurrent, name)
 }
 
 func newRefType(parent *Package, name string) *RefType {
-	fmt.Println(name)
 	ref := &RefType{
-		Name: name,
 		Pkg:  parent,
+		Name: name,
 	}
 	parent.RefType = append(parent.RefType, ref)
 	return ref

@@ -2,10 +2,10 @@ package myasthurts_test
 
 import (
 	"fmt"
-	"go/ast"
 	"go/parser"
 	"go/token"
 
+	"github.com/fatih/structtag"
 	myasthurts "github.com/jamillosantos/go-my-ast-hurts"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,7 +13,7 @@ import (
 
 var _ = Describe("My AST Hurts", func() {
 
-	FIt("should parse fields of User struct", func() {
+	It("should parse fields of User struct", func() {
 
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, "data/models2.sample", nil, parser.AllErrors)
@@ -21,7 +21,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(f).ToNot(BeNil())
 		Expect(f.Decls).ToNot(BeNil())
 
-		ast.Print(fset, f)
+		//ast.Print(fset, f)
 		env := myasthurts.NewEnvironment()
 		myasthurts.Parse(env, f)
 
@@ -31,7 +31,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(ok).To(BeTrue())
 		Expect(pkg.Structs).To(HaveLen(1))
 
-		/*s := pkg.Structs[0]
+		s := pkg.Structs[0]
 
 		Expect(s.Name()).To(Equal("User"))
 		Expect(s.Fields).To(HaveLen(6))
@@ -44,11 +44,11 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(fields[2].Name).To(Equal("Email"))
 		Expect(fields[3].Name).To(Equal("Password"))
 		Expect(fields[4].Name).To(Equal("CreatedAt"))
-		Expect(fields[5].Name).To(Equal("UpdatedAt"))*/
+		Expect(fields[5].Name).To(Equal("UpdatedAt"))
 
 	})
 
-	/*It("should parse function", func() {
+	It("should parse function", func() {
 
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, "data/models3.sample", nil, parser.AllErrors)
@@ -59,17 +59,20 @@ var _ = Describe("My AST Hurts", func() {
 		env := myasthurts.NewEnvironment()
 		myasthurts.Parse(env, f)
 
+		pkg, ok := env.PackageByName("models")
+
 		// ---------- Test Function - models3.sample ----------
-		Expect(env.Packages).To(HaveLen(1))
-		Expect(env.Packages[0].Methods).To(HaveLen(1))
-		Expect(env.Packages[0].Methods[0].Name()).To(Equal("test_1"))
-		Expect(env.Packages[0].Methods[0].Arguments).To(HaveLen(2))
+		Expect(ok).To(BeTrue())
+		Expect(pkg.Name).To(Equal("models"))
+		Expect(pkg.Methods).To(HaveLen(1))
+		Expect(pkg.Methods[0].Name()).To(Equal("test_1"))
+		Expect(pkg.Methods[0].Arguments).To(HaveLen(2))
 
-		Expect(env.Packages[0].Methods[0].Arguments[0].Name).To(Equal("num"))
-		Expect(env.Packages[0].Methods[0].Arguments[0].Type).To(Equal("int"))
+		Expect(pkg.Methods[0].Arguments[0].Name).To(Equal("num"))
+		Expect(pkg.Methods[0].Arguments[0].Type.Name).To(Equal("int"))
 
-		Expect(env.Packages[0].Methods[0].Arguments[1].Name).To(Equal("text"))
-		Expect(env.Packages[0].Methods[0].Arguments[1].Type).To(Equal("string"))
+		Expect(pkg.Methods[0].Arguments[1].Name).To(Equal("text"))
+		Expect(pkg.Methods[0].Arguments[1].Type.Name).To(Equal("string"))
 	})
 
 	It("should parse function in Struct", func() {
@@ -84,47 +87,49 @@ var _ = Describe("My AST Hurts", func() {
 		env := myasthurts.NewEnvironment()
 		myasthurts.Parse(env, f)
 
+		pkg, ok := env.PackageByName("models")
+
 		// ---------- Tests Functions - models4.sample ----------
 
-		Expect(env.Packages).To(HaveLen(1))
-		Expect(env.Packages[0].Structs).To(HaveLen(1))
-		Expect(env.Packages[0].Structs[0].Methods).To(HaveLen(2))
-		Expect(env.Packages[0].Structs[0].Methods[0].Descriptor.Name()).To(Equal("Address"))
-		Expect(env.Packages[0].Structs[0].Methods[1].Descriptor.Name()).To(Equal("ChangePassword"))
+		Expect(ok).To(BeTrue())
+		Expect(pkg.Structs).To(HaveLen(1))
+		Expect(pkg.Structs[0].Methods).To(HaveLen(2))
+		Expect(pkg.Structs[0].Methods[0].Descriptor.Name()).To(Equal("Address"))
+		Expect(pkg.Structs[0].Methods[1].Descriptor.Name()).To(Equal("ChangePassword"))
 
-		Expect(env.Packages[0].Methods).To(HaveLen(2))
+		Expect(pkg.Methods).To(HaveLen(2))
 
 		// Check if exist a func Address
-		Expect(env.Packages[0].Methods[0].Name()).To(Equal("Address"))
+		Expect(pkg.Methods[0].Name()).To(Equal("Address"))
 
 		// Check if doesn't exist arguments from func Address
-		Expect(env.Packages[0].Methods[0].Arguments).To(HaveLen(0))
+		Expect(pkg.Methods[0].Arguments).To(HaveLen(0))
 
 		// Check if exist all receptors from func Address
-		Expect(env.Packages[0].Methods[0].Recv).To(HaveLen(1))
-		Expect(env.Packages[0].Methods[0].Recv[0].Name).To(Equal("u"))
-		Expect(env.Packages[0].Methods[0].Recv[0].Type.Name).To(Equal("User"))
+		Expect(pkg.Methods[0].Recv).To(HaveLen(1))
+		Expect(pkg.Methods[0].Recv[0].Name).To(Equal("u"))
+		Expect(pkg.Methods[0].Recv[0].Type.Name).To(Equal("User"))
 
 		// ----- func ChangePassword -----
 
 		// Check if exist a func ChangePassword
-		Expect(env.Packages[0].Methods[1].Name()).To(Equal("ChangePassword"))
+		Expect(pkg.Methods[1].Name()).To(Equal("ChangePassword"))
 
 		// Check if exist all arguments from func ChangePassword
-		Expect(env.Packages[0].Methods[1].Arguments).To(HaveLen(1))
+		Expect(pkg.Methods[1].Arguments).To(HaveLen(1))
 
-		Expect(env.Packages[0].Methods[1].Arguments[0].Name).To(Equal("new"))
-		Expect(env.Packages[0].Methods[1].Arguments[0].Type.Name).To(Equal("string"))
+		Expect(pkg.Methods[1].Arguments[0].Name).To(Equal("new"))
+		Expect(pkg.Methods[1].Arguments[0].Type.Name).To(Equal("string"))
 
 		// Check if exist all receptors from func ChangePassword
-		Expect(env.Packages[0].Methods[1].Recv).To(HaveLen(1))
+		Expect(pkg.Methods[1].Recv).To(HaveLen(1))
 
-		Expect(env.Packages[0].Methods[1].Recv[0].Name).To(Equal("p"))
-		Expect(env.Packages[0].Methods[1].Recv[0].Type.Name).To(Equal("User"))
+		Expect(pkg.Methods[1].Recv[0].Name).To(Equal("p"))
+		Expect(pkg.Methods[1].Recv[0].Type.Name).To(Equal("User"))
 
 	})
 
-	It("should parse the variables", func() {
+	PIt("should parse the variables", func() {
 
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, "data/models5.sample", nil, parser.AllErrors)
@@ -151,18 +156,20 @@ var _ = Describe("My AST Hurts", func() {
 		env := myasthurts.NewEnvironment()
 		myasthurts.Parse(env, f)
 
+		pkg, ok := env.PackageByName("models")
+
 		// ---------- Tests struct tags - models5.sample ----------
-		Expect(env.Packages).To(HaveLen(1))
-		Expect(env.Packages[0].Structs).To(HaveLen(2))
+		Expect(ok).To(BeTrue())
+		Expect(pkg.Structs).To(HaveLen(2))
 
-		Expect(env.Packages[0].Structs[0].Name()).To(Equal("User"))
-		Expect(env.Packages[0].Structs[1].Name()).To(Equal("Test"))
+		Expect(pkg.Structs[0].Name()).To(Equal("User"))
+		Expect(pkg.Structs[1].Name()).To(Equal("Test"))
 
-		Expect(env.Packages[0].Structs[0].Fields).ToNot(BeNil())
-		Expect(env.Packages[0].Structs[1].Fields).ToNot(BeNil())
+		Expect(pkg.Structs[0].Fields).ToNot(BeNil())
+		Expect(pkg.Structs[1].Fields).ToNot(BeNil())
 
-		structUserFields := env.Packages[0].Structs[0].Fields
-		structTestFields := env.Packages[0].Structs[1].Fields
+		structUserFields := pkg.Structs[0].Fields
+		structTestFields := pkg.Structs[1].Fields
 
 		Expect(structUserFields).To(HaveLen(6))
 		Expect(structTestFields).To(HaveLen(3))
@@ -323,43 +330,45 @@ var _ = Describe("My AST Hurts", func() {
 		env := myasthurts.NewEnvironment()
 		myasthurts.Parse(env, f)
 
+		pkg, ok := env.PackageByName("models")
+
 		// ---------- Tests struct tags - models7.sample ----------
 
-		Expect(env.Packages).To(HaveLen(1))
-		Expect(env.Packages[0].Name).To(Equal("models"))
+		Expect(ok).To(BeTrue())
+		Expect(pkg.Name).To(Equal("models"))
 
-		Expect(env.Packages[0].RefType).To(HaveLen(4))
-		Expect(env.Packages[0].RefType[0].Name).To(Equal("User"))
-		Expect(env.Packages[0].RefType[1].Name).To(Equal("int64"))
-		Expect(env.Packages[0].RefType[2].Name).To(Equal("string"))
-		Expect(env.Packages[0].RefType[3].Name).To(Equal("time"))
+		Expect(pkg.RefType).To(HaveLen(4))
+		Expect(pkg.RefType[0].Name).To(Equal("time"))
+		Expect(pkg.RefType[1].Name).To(Equal("User"))
+		Expect(pkg.RefType[2].Name).To(Equal("int64"))
+		Expect(pkg.RefType[3].Name).To(Equal("string"))
 
-		Expect(env.Packages[0].RefType[0].Pkg.Name).To(Equal("models"))
-		Expect(env.Packages[0].RefType[1].Pkg.Name).To(Equal("models"))
-		Expect(env.Packages[0].RefType[2].Pkg.Name).To(Equal("models"))
-		Expect(env.Packages[0].RefType[3].Pkg.Name).To(Equal("models"))
+		Expect(pkg.RefType[0].Pkg.Name).To(Equal("models"))
+		Expect(pkg.RefType[1].Pkg.Name).To(Equal("models"))
+		Expect(pkg.RefType[2].Pkg.Name).To(Equal("models"))
+		Expect(pkg.RefType[3].Pkg.Name).To(Equal("models"))
 
-		Expect(env.Packages[0].RefType[0].Type).ToNot(BeNil())
-		Expect(env.Packages[0].RefType[0].Type.Name()).To(Equal("User"))
+		Expect(pkg.RefType[0].Type).To(BeNil())
+		Expect(pkg.RefType[0].Name).To(Equal("time"))
 
-		Expect(env.Packages[0].RefType[1].Type).To(BeNil())
-		Expect(env.Packages[0].RefType[1].Name).To(Equal("int64"))
+		Expect(pkg.RefType[1].Type).ToNot(BeNil())
+		Expect(pkg.RefType[1].Type.Name()).To(Equal("User"))
 
-		Expect(env.Packages[0].RefType[2].Type).To(BeNil())
-		Expect(env.Packages[0].RefType[2].Name).To(Equal("string"))
+		Expect(pkg.RefType[2].Type).To(BeNil())
+		Expect(pkg.RefType[2].Name).To(Equal("int64"))
 
-		Expect(env.Packages[0].RefType[3].Type).To(BeNil())
-		Expect(env.Packages[0].RefType[3].Name).To(Equal("time"))
+		Expect(pkg.RefType[3].Type).To(BeNil())
+		Expect(pkg.RefType[3].Name).To(Equal("string"))
 
-		Expect(env.Packages[0].Structs).To(HaveLen(1))
-		Expect(env.Packages[0].Structs[0].Name()).To(Equal("User"))
-		Expect(env.Packages[0].Structs[0].Methods).To(HaveLen(1))
-		Expect(env.Packages[0].Structs[0].Methods[0].Descriptor.Name()).To(Equal("getName"))
+		Expect(pkg.Structs).To(HaveLen(1))
+		Expect(pkg.Structs[0].Name()).To(Equal("User"))
+		Expect(pkg.Structs[0].Methods).To(HaveLen(1))
+		Expect(pkg.Structs[0].Methods[0].Descriptor.Name()).To(Equal("getName"))
 
-		Expect(env.Packages[0].Methods).To(HaveLen(1))
-		Expect(env.Packages[0].Methods[0].Name()).To(Equal("getName"))
-		Expect(env.Packages[0].Methods[0].Recv).To(HaveLen(1))
-		Expect(env.Packages[0].Methods[0].Recv[0].Type.Name).To(Equal(env.Packages[0].Structs[0].Name()))
+		Expect(pkg.Methods).To(HaveLen(1))
+		Expect(pkg.Methods[0].Name()).To(Equal("getName"))
+		Expect(pkg.Methods[0].Recv).To(HaveLen(1))
+		Expect(pkg.Methods[0].Recv[0].Type.Name).To(Equal(pkg.Structs[0].Name()))
 
 	})
 
@@ -370,14 +379,36 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(f).ToNot(BeNil())
 		Expect(f.Decls).ToNot(BeNil())
 
-		ast.Print(fset, f)
+		//ast.Print(fset, f)
 		env := myasthurts.NewEnvironment()
 		myasthurts.Parse(env, f)
-
 		// ---------- Tests struct tags - models8.sample ----------
 
-		Expect(env.Packages).To(HaveLen(1))
+		pkg, ok := env.PackageByName("models")
 
-	})*/
+		Expect(ok).To(BeTrue())
+		Expect(pkg.Name).To(Equal("models"))
+
+		Expect(pkg.Structs).To(HaveLen(1))
+		Expect(pkg.Structs[0].Methods).To(HaveLen(1))
+		Expect(pkg.Structs[0].Name()).To(Equal("User"))
+		Expect(pkg.Structs[0].Fields).To(HaveLen(3))
+
+		Expect(pkg.Structs[0].Fields[0].Name).To(Equal("ID"))
+		Expect(pkg.Structs[0].Fields[1].Name).To(Equal("Name"))
+		Expect(pkg.Structs[0].Fields[2].Name).To(Equal("CreatedAt"))
+
+		Expect(pkg.Structs[0].Fields[0].Type.Name).To(Equal("int64"))
+		Expect(pkg.Structs[0].Fields[1].Type.Name).To(Equal("string"))
+
+		time, okT := env.PackageByName("time")
+		Expect(okT).To(BeTrue())
+		Expect(pkg.Structs[0].Fields[2].Type.Name).To(Equal("t"))
+		Expect(time.Name).To(Equal("time"))
+
+		Expect(pkg.Methods).To(HaveLen(1))
+		Expect(pkg.Methods[0].Name()).To(Equal("getName"))
+
+	})
 
 })
