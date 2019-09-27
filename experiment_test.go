@@ -2,6 +2,7 @@ package myasthurts_test
 
 import (
 	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
 
@@ -158,7 +159,7 @@ var _ = Describe("My AST Hurts", func() {
 
 		pkg, ok := env.PackageByName("models")
 
-		// ---------- Tests struct tags - models5.sample ----------
+		// ---------- Tests struct tags - models6.sample ----------
 		Expect(ok).To(BeTrue())
 		Expect(pkg.Structs).To(HaveLen(2))
 
@@ -408,6 +409,35 @@ var _ = Describe("My AST Hurts", func() {
 
 		Expect(pkg.Methods).To(HaveLen(1))
 		Expect(pkg.Methods[0].Name()).To(Equal("getName"))
+
+	})
+
+	It("should parse types in struct", func() {
+
+		fset := token.NewFileSet()
+		f, err := parser.ParseFile(fset, "data/models9.sample", nil, parser.AllErrors)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(f).ToNot(BeNil())
+		Expect(f.Decls).ToNot(BeNil())
+
+		ast.Print(fset, f)
+		env := myasthurts.NewEnvironment()
+		myasthurts.Parse(env, f)
+		// ---------- Tests struct tags - models9.sample ----------
+
+		pkg, ok := env.PackageByName("models")
+
+		Expect(ok).To(BeTrue())
+		Expect(pkg.Structs).To(HaveLen(2))
+
+		Expect(pkg.Structs[0].Name()).To(Equal("Compra"))
+		Expect(pkg.Structs[1].Name()).To(Equal("User"))
+
+		Expect(pkg.Structs[0].Fields).To(HaveLen(2))
+		Expect(pkg.Structs[0].Fields[1].Type).ToNot(BeNil())
+		//Expect(pkg.RefTypeByName())
+
+		Expect(pkg.Structs[0].Fields[1].Type.Pkg).To(Equal("a"))
 
 	})
 

@@ -164,6 +164,22 @@ func (p *Package) AppendStruct(s *Struct) {
 	p.Structs = append(p.Structs, s)
 }
 
+func (p *Package) AppendRefType(name string) {
+	p.RefType = append(p.RefType, &RefType{
+		Name: name,
+		Pkg:  p,
+	})
+}
+
+func (p *Package) RefTypeByName(name string) *RefType {
+	for _, pt := range p.RefType {
+		if pt.Name == name {
+			return pt
+		}
+	}
+	return nil
+}
+
 type Environment struct {
 	packages    []*Package
 	packagesMap map[string]*Package
