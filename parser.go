@@ -43,8 +43,15 @@ func parsePackage(ctx *parseContext) {
 
 	_, ok := ctx.Env.PackageByName(ctx.File.Name.Name)
 	if !ok {
+		comment := ""
+		if ctx.File.Doc != nil {
+			for _, doc := range ctx.File.Doc.List {
+				comment += fmt.Sprintf("%s\n", doc.Text)
+			}
+		}
 		pkg := &Package{
-			Name: ctx.File.Name.Name,
+			Name:    ctx.File.Name.Name,
+			Comment: comment,
 		}
 		ctx.Env.AppendPackage(pkg)
 		ctx.PackagesMap[ctx.File.Name.Name] = pkg
@@ -52,12 +59,19 @@ func parsePackage(ctx *parseContext) {
 }
 
 func parseGenDecl(ctx *parseContext, s *ast.GenDecl) {
+	comment := ""
+	if s.Doc != nil {
+		for _, doc := range s.Doc.List {
+			comment += fmt.Sprintf("%s\n", doc.Text)
+		}
+	}
+
 	for _, spec := range s.Specs {
-		parseSpec(ctx, spec)
+		parseSpec(ctx, spec, comment)
 	}
 }
 
-func parseSpec(ctx *parseContext, spec ast.Spec) {
+func parseSpec(ctx *parseContext, spec ast.Spec, comment string) {
 	currentPackage := ctx.PackagesMap[ctx.File.Name.Name]
 
 	switch s := spec.(type) {
@@ -65,6 +79,7 @@ func parseSpec(ctx *parseContext, spec ast.Spec) {
 		switch t := s.Type.(type) {
 		case *ast.StructType:
 			declStruct := NewStruct(currentPackage, s.Name.Name)
+			declStruct.Comment = comment
 			refType := getRefType(ctx, s.Name.Name)
 			refType.Type = declStruct
 

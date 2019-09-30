@@ -420,7 +420,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(f).ToNot(BeNil())
 		Expect(f.Decls).ToNot(BeNil())
 
-		ast.Print(fset, f)
+		//ast.Print(fset, f)
 		env := myasthurts.NewEnvironment()
 		myasthurts.Parse(env, f)
 		// ---------- Tests struct tags - models9.sample ----------
@@ -435,9 +435,31 @@ var _ = Describe("My AST Hurts", func() {
 
 		Expect(pkg.Structs[0].Fields).To(HaveLen(2))
 		Expect(pkg.Structs[0].Fields[1].Type).ToNot(BeNil())
-		//Expect(pkg.RefTypeByName())
 
-		Expect(pkg.Structs[0].Fields[1].Type.Pkg).To(Equal("a"))
+		refType := pkg.RefTypeByName("string")
+		Expect(refType).ToNot(BeNil())
+
+		Expect(pkg.Structs[0].Fields[1].Type.Pkg).To(Equal(refType.Pkg))
+
+	})
+
+	It("should parse comments", func() {
+		fset := token.NewFileSet()
+		f, err := parser.ParseFile(fset, "data/models10.sample", nil, parser.ParseComments)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(f).ToNot(BeNil())
+		Expect(f.Decls).ToNot(BeNil())
+
+		ast.Print(fset, f)
+		env := myasthurts.NewEnvironment()
+		myasthurts.Parse(env, f)
+		// ---------- Tests struct tags - models10.sample ----------
+
+		pkg, ok := env.PackageByName("models")
+		Expect(ok).To(BeTrue())
+		Expect(pkg.Structs).To(HaveLen(2))
+
+		Expect(pkg.Structs[1].Comment).To(Equal("/** Comment for test\ntext for more test\ntesting comments */\n"))
 
 	})
 

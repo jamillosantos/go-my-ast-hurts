@@ -1,0 +1,19 @@
+/** Package models is a test
+new line, test */
+package models
+
+// Struct type Compra
+// Test New line test
+type Compra struct {
+	ID   int64 `json:"id"`
+	User User  `json:"name"`
+}
+
+/** Comment for test
+text for more test
+testing comments */
+type User struct {
+	ID    int64  `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
