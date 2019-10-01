@@ -2,7 +2,6 @@ package myasthurts_test
 
 import (
 	"fmt"
-	"go/ast"
 	"go/parser"
 	"go/token"
 
@@ -144,6 +143,10 @@ var _ = Describe("My AST Hurts", func() {
 		// ---------- Tests Functions - models5.sample ----------
 		// TODO
 	})
+
+	/*Context("Struct Tags", func () {
+		//
+	})*/
 
 	It("should parse struct tags", func() {
 
@@ -443,24 +446,74 @@ var _ = Describe("My AST Hurts", func() {
 
 	})
 
-	It("should parse comments", func() {
+	It("should parse multi line comments in struct", func() {
+		fset := token.NewFileSet()
+		f, err := parser.ParseFile(fset, "data/models11.sample", nil, parser.ParseComments)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(f).ToNot(BeNil())
+		Expect(f.Decls).ToNot(BeNil())
+
+		env := myasthurts.NewEnvironment()
+		myasthurts.Parse(env, f)
+
+		pkg, ok := env.PackageByName("models")
+		Expect(ok).To(BeTrue())
+
+		Expect(pkg.Structs).To(HaveLen(1))
+		Expect(pkg.Structs[0].Comment).To(HaveLen(2))
+
+	})
+
+	It("should parse multi line comments in struct field", func() {
+		fset := token.NewFileSet()
+		f, err := parser.ParseFile(fset, "data/models12.sample", nil, parser.ParseComments)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(f).ToNot(BeNil())
+		Expect(f.Decls).ToNot(BeNil())
+
+		env := myasthurts.NewEnvironment()
+		myasthurts.Parse(env, f)
+
+		pkg, ok := env.PackageByName("models")
+		Expect(ok).To(BeTrue())
+
+		Expect(pkg.Structs).To(HaveLen(1))
+		Expect(pkg.Structs[0].Comment).To(HaveLen(0))
+		Expect(pkg.Structs[0].Fields).To(HaveLen(2))
+		Expect(pkg.Structs[0].Fields[1].Comment).To(HaveLen(2))
+
+	})
+
+	/*It("should parse comments in struct", func() {
 		fset := token.NewFileSet()
 		f, err := parser.ParseFile(fset, "data/models10.sample", nil, parser.ParseComments)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(f).ToNot(BeNil())
 		Expect(f.Decls).ToNot(BeNil())
 
-		ast.Print(fset, f)
+		//ast.Print(fset, f)
 		env := myasthurts.NewEnvironment()
 		myasthurts.Parse(env, f)
 		// ---------- Tests struct tags - models10.sample ----------
 
 		pkg, ok := env.PackageByName("models")
 		Expect(ok).To(BeTrue())
+
+		Expect(pkg.Comment).To(HaveLen(1))
+
 		Expect(pkg.Structs).To(HaveLen(2))
 
-		Expect(pkg.Structs[1].Comment).To(Equal("/** Comment for test\ntext for more test\ntesting comments */\n"))
+		Expect(pkg.Structs[0].Comment).To(HaveLen(2))
+		Expect(pkg.Structs[1].Comment).To(HaveLen(1))
 
-	})
+		Expect(pkg.Structs[0].Comment[0]).To(Equal("// Struct type Compra"))
+		Expect(pkg.Structs[0].Comment[1]).To(Equal("// Test New line test"))
+
+		Expect(pkg.Structs[1].Comment[0]).To(Equal("/** Comment for test\ntext for more test\ntesting comments "))
+
+		Expect(pkg.Structs[1].Fields).To(HaveLen(3))
+		Expect(pkg.Structs[1].Fields[0].Comment).To(HaveLen(1))
+
+	})*/
 
 })

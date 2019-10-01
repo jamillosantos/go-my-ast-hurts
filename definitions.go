@@ -8,7 +8,7 @@ type Type interface {
 type MethodDescriptor struct {
 	pkg       *Package
 	name      string
-	Comment   string
+	Comment   []string
 	Recv      []MethodArgument
 	Arguments []MethodArgument
 	Result    []MethodResult
@@ -34,7 +34,7 @@ type Interface struct {
 	pkg     *Package
 	name    string
 	Methods []MethodDescriptor
-	Comment string
+	Comment []string
 }
 
 func NewInterface(pkg *Package, name string) *Interface {
@@ -55,7 +55,7 @@ func (i *Interface) Name() string {
 type Struct struct {
 	pkg        *Package
 	name       string
-	Comment    string
+	Comment    []string
 	Fields     []*Field
 	Methods    []*StructMethod
 	Interfaces []*Interface
@@ -125,7 +125,7 @@ type Field struct {
 	Name    string
 	Type    *RefType
 	Tag     Tag
-	Comment string
+	Comment []string
 }
 
 type StructMethod struct {
@@ -136,7 +136,7 @@ type StructMethod struct {
 type File struct {
 	Package    *Package
 	FileName   string
-	Comment    string
+	Comment    []string
 	Variables  []*Variable
 	Constants  []*Constant
 	Structs    []*Struct
@@ -146,7 +146,7 @@ type File struct {
 
 type Package struct {
 	Name        string
-	Comment     string
+	Comment     []string
 	Directory   string
 	Variables   []*Variable
 	Constants   []*Constant

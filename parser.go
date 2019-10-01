@@ -43,11 +43,9 @@ func parsePackage(ctx *parseContext) {
 
 	_, ok := ctx.Env.PackageByName(ctx.File.Name.Name)
 	if !ok {
-		comment := ""
+		var comment []string
 		if ctx.File.Doc != nil {
-			for _, doc := range ctx.File.Doc.List {
-				comment += fmt.Sprintf("%s\n", doc.Text)
-			}
+			comment = parseComments(ctx.File.Doc)
 		}
 		pkg := &Package{
 			Name:    ctx.File.Name.Name,
@@ -58,20 +56,30 @@ func parsePackage(ctx *parseContext) {
 	}
 }
 
+func parseComments(doc *ast.CommentGroup) []string {
+	if doc.List == nil {
+		return nil
+	}
+	size := len(doc.List)
+	comments := make([]string, size)
+	for i := 0; i < size; i++ {
+		comments[i] = doc.List[i].Text
+	}
+	return comments
+}
+
 func parseGenDecl(ctx *parseContext, s *ast.GenDecl) {
-	comment := ""
+	var comments []string
 	if s.Doc != nil {
-		for _, doc := range s.Doc.List {
-			comment += fmt.Sprintf("%s\n", doc.Text)
-		}
+		comments = parseComments(s.Doc)
 	}
 
 	for _, spec := range s.Specs {
-		parseSpec(ctx, spec, comment)
+		parseSpec(ctx, spec, comments)
 	}
 }
 
-func parseSpec(ctx *parseContext, spec ast.Spec, comment string) {
+func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) {
 	currentPackage := ctx.PackagesMap[ctx.File.Name.Name]
 
 	switch s := spec.(type) {
@@ -79,7 +87,7 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comment string) {
 		switch t := s.Type.(type) {
 		case *ast.StructType:
 			declStruct := NewStruct(currentPackage, s.Name.Name)
-			declStruct.Comment = comment
+			declStruct.Comment = comments
 			refType := getRefType(ctx, s.Name.Name)
 			refType.Type = declStruct
 
@@ -130,13 +138,14 @@ func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struc
 			refType = getRefType(ctx, t.Name)
 		case *ast.SelectorExpr:
 			refType = getRefType(ctx, t.X.(*ast.Ident).Name)
-			//tmpName := fmt.Sprintf("%s:%s", t.X.(*ast.Ident).Name, t.Sel.Name)
 		}
 
 		f := &Field{}
 		f.Type = refType
 		f.Tag.Raw = ""
-		f.Comment = field.Comment.Text()
+		if field.Doc != nil {
+			f.Comment = parseComments(field.Doc)
+		}
 
 		if len(field.Names) > 0 { // TODO(jack): To check/understand multiple names.
 			f.Name = field.Names[0].Name
