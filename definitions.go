@@ -110,6 +110,24 @@ type Tag struct {
 	Params []TagParam
 }
 
+func (t *Tag) AppendTagParam(tNew *TagParam) bool {
+	_, ok := t.TagParamByName(tNew.Name)
+	if ok {
+		return !ok
+	}
+	t.Params = append(t.Params, *tNew)
+	return ok
+}
+
+func (t *Tag) TagParamByName(name string) (*TagParam, bool) {
+	for _, tp := range t.Params {
+		if tp.Name == name {
+			return &tp, true
+		}
+	}
+	return nil, false
+}
+
 type TagParam struct {
 	Name    string
 	Value   string
@@ -164,20 +182,13 @@ func (p *Package) AppendStruct(s *Struct) {
 	p.Structs = append(p.Structs, s)
 }
 
-func (p *Package) AppendRefType(name string) {
-	p.RefType = append(p.RefType, &RefType{
-		Name: name,
-		Pkg:  p,
-	})
-}
-
-func (p *Package) RefTypeByName(name string) *RefType {
-	for _, pt := range p.RefType {
-		if pt.Name == name {
-			return pt
+func (p *Package) RefTypeByName(name string) (*RefType, bool) {
+	for _, pr := range p.RefType {
+		if name == pr.Name {
+			return pr, true
 		}
 	}
-	return nil
+	return nil, false
 }
 
 type Environment struct {

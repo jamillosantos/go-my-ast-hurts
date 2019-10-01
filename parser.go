@@ -153,7 +153,6 @@ func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struc
 
 		if field.Tag != nil && field.Tag.Value != "" {
 			f.Tag.Raw = field.Tag.Value[1 : len(field.Tag.Value)-1]
-			tp := &TagParam{}
 
 			structTag, err := structtag.Parse(f.Tag.Raw)
 			if err != nil {
@@ -161,24 +160,21 @@ func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struc
 				panic(err)
 			}
 
-			jsonTag, err := structTag.Get("json")
-			if err != nil {
-				fmt.Println("Error in parse StructTag.")
-				panic(err)
-			}
+			for _, tag := range structTag.Tags() {
+				tp := &TagParam{}
+				size := len(tag.Options)
 
-			size := len(jsonTag.Options)
+				tp.Name = tag.Key
+				tp.Value = tag.Name
+				tp.Options = make([]string, size)
 
-			tp.Name = jsonTag.Key
-			tp.Value = jsonTag.Name
-			tp.Options = make([]string, size)
-
-			if size != 0 {
-				for i := 0; i < size; i++ {
-					tp.Options[i] = jsonTag.Options[i]
+				if size != 0 {
+					for i := 0; i < size; i++ {
+						tp.Options[i] = tag.Options[i]
+					}
 				}
+				f.Tag.AppendTagParam(tp)
 			}
-			f.Tag.Params = append(f.Tag.Params, *tp)
 		}
 		typeStruct.Fields = append(typeStruct.Fields, f)
 	}

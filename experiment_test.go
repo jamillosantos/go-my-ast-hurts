@@ -13,6 +13,174 @@ import (
 
 var _ = Describe("My AST Hurts", func() {
 
+	FContext("should parse struct", func() {
+
+		It("should parse struct", func() {
+			fset := token.NewFileSet()
+			f, err := parser.ParseFile(fset, "data/models1.sample", nil, parser.AllErrors)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).ToNot(BeNil())
+			Expect(f.Decls).ToNot(BeNil())
+
+			//ast.Print(fset, f)
+			env := myasthurts.NewEnvironment()
+			myasthurts.Parse(env, f)
+
+			pkg, ok := env.PackageByName("models")
+			Expect(ok).To(BeTrue())
+
+			Expect(pkg).NotTo(BeNil())
+			Expect(pkg.Structs).To(HaveLen(2))
+
+		})
+
+		It("should parse struct fields", func() {
+			fset := token.NewFileSet()
+			f, err := parser.ParseFile(fset, "data/models2.sample", nil, parser.AllErrors)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).ToNot(BeNil())
+			Expect(f.Decls).ToNot(BeNil())
+
+			//ast.Print(fset, f)
+			env := myasthurts.NewEnvironment()
+			myasthurts.Parse(env, f)
+
+			pkg, ok := env.PackageByName("models")
+			Expect(ok).To(BeTrue())
+
+			Expect(pkg).NotTo(BeNil())
+			Expect(pkg.Structs).To(HaveLen(2))
+
+			Expect(pkg.Structs[0].Fields).To(HaveLen(3))
+			Expect(pkg.Structs[1].Fields).To(HaveLen(2))
+
+			Expect(pkg.Structs[0].Fields[0].Name).To(Equal("ID"))
+			Expect(pkg.Structs[0].Fields[1].Name).To(Equal("Name"))
+			Expect(pkg.Structs[0].Fields[2].Name).To(Equal("Email"))
+
+			Expect(pkg.Structs[0].Fields[0].Type).ToNot(Equal(BeNil()))
+			Expect(pkg.Structs[0].Fields[1].Type).ToNot(Equal(BeNil()))
+			Expect(pkg.Structs[0].Fields[2].Type).ToNot(Equal(BeNil()))
+
+			Expect(pkg.Structs[0].Fields[0].Type.Name).To(Equal("int64"))
+			Expect(pkg.Structs[0].Fields[1].Type.Name).To(Equal("string"))
+			Expect(pkg.Structs[0].Fields[2].Type.Name).To(Equal("string"))
+
+			Expect(pkg.Structs[0].Fields[0].Type.Type).To(BeNil())
+			Expect(pkg.Structs[0].Fields[1].Type.Type).To(BeNil())
+			Expect(pkg.Structs[0].Fields[2].Type.Type).To(BeNil())
+
+			Expect(pkg.Structs[1].Fields[0].Name).To(Equal("ID"))
+			Expect(pkg.Structs[1].Fields[1].Name).To(Equal("Address"))
+
+			Expect(pkg.Structs[1].Fields[0].Type).ToNot(Equal(BeNil()))
+			Expect(pkg.Structs[1].Fields[1].Type).ToNot(Equal(BeNil()))
+
+			Expect(pkg.Structs[1].Fields[0].Type.Name).To(Equal("int64"))
+			Expect(pkg.Structs[1].Fields[1].Type.Name).To(Equal("string"))
+
+			Expect(pkg.Structs[1].Fields[0].Type.Type).To(BeNil())
+			Expect(pkg.Structs[1].Fields[1].Type.Type).To(BeNil())
+
+		})
+
+		It("should parse struct tags", func() {
+			fset := token.NewFileSet()
+			f, err := parser.ParseFile(fset, "data/models3.sample", nil, parser.AllErrors)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).ToNot(BeNil())
+			Expect(f.Decls).ToNot(BeNil())
+
+			env := myasthurts.NewEnvironment()
+			myasthurts.Parse(env, f)
+
+			pkg, ok := env.PackageByName("models")
+			Expect(ok).To(BeTrue())
+
+			Expect(pkg).NotTo(BeNil())
+			Expect(pkg.Structs).To(HaveLen(1))
+			Expect(pkg.Structs[0].Name()).To(Equal("User"))
+			Expect(pkg.Structs[0].Fields).To(HaveLen(3))
+
+			Expect(pkg.Structs[0].Fields[0].Tag).NotTo(BeNil())
+			Expect(pkg.Structs[0].Fields[0].Tag.Raw).To(Equal("json:\"id\""))
+			Expect(pkg.Structs[0].Fields[0].Tag.Params).To(HaveLen(1))
+			Expect(pkg.Structs[0].Fields[0].Tag.Params[0].Name).To(Equal("json"))
+			Expect(pkg.Structs[0].Fields[0].Tag.Params[0].Value).To(Equal("id"))
+			Expect(pkg.Structs[0].Fields[0].Tag.Params[0].Options).To(BeEmpty())
+
+			Expect(pkg.Structs[0].Fields[1].Tag.Raw).To(Equal("json:\"name,lastName\""))
+			Expect(pkg.Structs[0].Fields[1].Tag.Params).To(HaveLen(1))
+			Expect(pkg.Structs[0].Fields[1].Tag.Params[0].Name).To(Equal("json"))
+			Expect(pkg.Structs[0].Fields[1].Tag.Params[0].Value).To(Equal("name"))
+			Expect(pkg.Structs[0].Fields[1].Tag.Params[0].Options).To(HaveLen(1))
+			Expect(pkg.Structs[0].Fields[1].Tag.Params[0].Options[0]).To(Equal("lastName"))
+
+			Expect(pkg.Structs[0].Fields[2].Tag.Raw).To(Equal("json:\"address\" bson:\"\""))
+			Expect(pkg.Structs[0].Fields[2].Tag.Params).To(HaveLen(2))
+			Expect(pkg.Structs[0].Fields[2].Tag.Params[0].Name).To(Equal("json"))
+			Expect(pkg.Structs[0].Fields[2].Tag.Params[0].Value).To(Equal("address"))
+			Expect(pkg.Structs[0].Fields[2].Tag.Params[0].Options).To(BeEmpty())
+
+			Expect(pkg.Structs[0].Fields[2].Tag.Params[1].Name).To(Equal("bson"))
+			Expect(pkg.Structs[0].Fields[2].Tag.Params[1].Value).To(BeEmpty())
+			Expect(pkg.Structs[0].Fields[2].Tag.Params[1].Options).To(BeEmpty())
+
+		})
+
+		It("should parse struct custom field", func() {
+			fset := token.NewFileSet()
+			f, err := parser.ParseFile(fset, "data/models4.sample", nil, parser.AllErrors)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).ToNot(BeNil())
+			Expect(f.Decls).ToNot(BeNil())
+
+			//ast.Print(fset, f)
+			env := myasthurts.NewEnvironment()
+			myasthurts.Parse(env, f)
+
+			pkg, ok := env.PackageByName("models")
+			Expect(ok).To(BeTrue())
+
+			Expect(pkg).NotTo(BeNil())
+			Expect(pkg.Structs).To(HaveLen(2))
+
+			Expect(pkg.Structs[0].Fields).To(HaveLen(2))
+			Expect(pkg.Structs[0].Fields[1].Type.Name).To(Equal("User"))
+			Expect(pkg.Structs[0].Fields[1].Type.Type).To(Equal(pkg.Structs[1]))
+			Expect(pkg.Structs[0].Fields[1].Type.Pkg).To(Equal(pkg))
+
+		})
+
+		It("should parse struct comments", func() {
+			fset := token.NewFileSet()
+			f, err := parser.ParseFile(fset, "data/models5.sample", nil, parser.ParseComments)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).ToNot(BeNil())
+			Expect(f.Decls).ToNot(BeNil())
+
+			//ast.Print(fset, f)
+			env := myasthurts.NewEnvironment()
+			myasthurts.Parse(env, f)
+
+			pkg, ok := env.PackageByName("models")
+			Expect(ok).To(BeTrue())
+
+			Expect(pkg).NotTo(BeNil())
+			Expect(pkg.Structs).To(HaveLen(1))
+
+			Expect(pkg.Structs[0].Comment).To(HaveLen(1))
+			Expect(pkg.Structs[0].Fields).To(HaveLen(4))
+
+			Expect(pkg.Structs[0].Fields[0].Comment).To(HaveLen(1))
+			Expect(pkg.Structs[0].Fields[1].Comment).To(HaveLen(1))
+			Expect(pkg.Structs[0].Fields[2].Comment).To(HaveLen(2))
+			Expect(pkg.Structs[0].Fields[3].Comment).To(BeEmpty())
+
+		})
+
+	})
+
 	It("should parse fields of User struct", func() {
 
 		fset := token.NewFileSet()
@@ -103,7 +271,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(pkg.Methods[0].Name()).To(Equal("Address"))
 
 		// Check if doesn't exist arguments from func Address
-		Expect(pkg.Methods[0].Arguments).To(HaveLen(0))
+		Expect(pkg.Methods[0].Arguments).To(BeEmpty())
 
 		// Check if exist all receptors from func Address
 		Expect(pkg.Methods[0].Recv).To(HaveLen(1))
@@ -195,7 +363,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(structUserFields[2].Tag.Raw).ToNot(BeNil())
 		Expect(structUserFields[3].Tag.Raw).ToNot(BeNil())
 		Expect(structUserFields[4].Tag.Raw).ToNot(BeNil())
-		Expect(structUserFields[5].Tag.Raw).To(Equal(""))
+		Expect(structUserFields[5].Tag.Raw).To(BeEmpty())
 
 		Expect(structUserFields[0].Tag.Raw).To(Equal("json:\"id,uuidTest\""))
 		Expect(structUserFields[1].Tag.Raw).To(Equal("json:\"name\" bson:\"\""))
@@ -227,11 +395,11 @@ var _ = Describe("My AST Hurts", func() {
 
 		Expect(getStructUserTagName.Key).To(Equal("json"))
 		Expect(getStructUserTagName.Name).To(Equal("name"))
-		Expect(getStructUserTagName.Options).To(HaveLen(0))
+		Expect(getStructUserTagName.Options).To(BeEmpty())
 
 		Expect(getStructUserTagNameBson.Key).To(Equal("bson"))
-		Expect(getStructUserTagNameBson.Name).To(Equal(""))
-		Expect(getStructUserTagNameBson.Options).To(HaveLen(0))
+		Expect(getStructUserTagNameBson.Name).To(BeEmpty())
+		Expect(getStructUserTagNameBson.Options).To(BeEmpty())
 
 		// ----------- Test Tag with value Email
 		structUserTagEmail, err := structtag.Parse(structUserFields[2].Tag.Raw)
@@ -242,7 +410,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(getStructUserTagEmail.Key).To(Equal("json"))
 		Expect(getStructUserTagEmail.Name).To(Equal("email"))
-		Expect(getStructUserTagEmail.Options).To(HaveLen(0))
+		Expect(getStructUserTagEmail.Options).To(BeEmpty())
 
 		// ----------- Test Tag with value Password
 		structUserTagPassword, err := structtag.Parse(structUserFields[3].Tag.Raw)
@@ -275,12 +443,12 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(getStructUserTagCreated_at.Key).To(Equal("json"))
 		Expect(getStructUserTagCreated_at.Name).To(Equal("created_at"))
-		Expect(getStructUserTagCreated_at.Options).To(HaveLen(0))
+		Expect(getStructUserTagCreated_at.Options).To(BeEmpty())
 
 		// ----------- Test Tag with value updated_at
 		structUserTagUpdated_at, err := structtag.Parse(structUserFields[5].Tag.Raw)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(structUserTagUpdated_at.Tags()).To(HaveLen(0))
+		Expect(structUserTagUpdated_at.Tags()).To(BeEmpty())
 
 		// ---------- Test Struct tag from struct Test ----------
 
@@ -297,7 +465,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(getStructTestTagId.Key).To(Equal("json"))
 		Expect(getStructTestTagId.Name).To(Equal("id"))
-		Expect(getStructTestTagId.Options).To(HaveLen(0))
+		Expect(getStructTestTagId.Options).To(BeEmpty())
 
 		// ----------- Test Tag with value Name
 		structTestTagName, err := structtag.Parse(structTestFields[1].Tag.Raw)
@@ -308,7 +476,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(getStructTestTagName.Key).To(Equal("json"))
 		Expect(getStructTestTagName.Name).To(Equal("name"))
-		Expect(getStructTestTagName.Options).To(HaveLen(0))
+		Expect(getStructTestTagName.Options).To(BeEmpty())
 
 		// ----------- Test Tag with value Email
 		structTestTagEmail, err := structtag.Parse(structTestFields[2].Tag.Raw)
@@ -319,7 +487,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(getStructTestTagEmail.Key).To(Equal("json"))
 		Expect(getStructTestTagEmail.Name).To(Equal("email"))
-		Expect(getStructTestTagEmail.Options).To(HaveLen(0))
+		Expect(getStructTestTagEmail.Options).To(BeEmpty())
 
 	})
 
@@ -439,7 +607,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(pkg.Structs[0].Fields).To(HaveLen(2))
 		Expect(pkg.Structs[0].Fields[1].Type).ToNot(BeNil())
 
-		refType := pkg.RefTypeByName("string")
+		refType, _ := pkg.RefTypeByName("string")
 		Expect(refType).ToNot(BeNil())
 
 		Expect(pkg.Structs[0].Fields[1].Type.Pkg).To(Equal(refType.Pkg))
@@ -478,7 +646,7 @@ var _ = Describe("My AST Hurts", func() {
 		Expect(ok).To(BeTrue())
 
 		Expect(pkg.Structs).To(HaveLen(1))
-		Expect(pkg.Structs[0].Comment).To(HaveLen(0))
+		Expect(pkg.Structs[0].Comment).To(BeEmpty())
 		Expect(pkg.Structs[0].Fields).To(HaveLen(2))
 		Expect(pkg.Structs[0].Fields[1].Comment).To(HaveLen(2))
 

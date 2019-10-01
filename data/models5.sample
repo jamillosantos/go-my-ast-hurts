@@ -1,14 +1,15 @@
-// Package models is a test
 package models
 
-// variables
-var (
-	a string 
-	b int
-	c bool
-	d = "Olá"
-	e = 64
-	f = true
-	g User
-	h = User{Name: "Teste"}
-)
+/** Test multiline if 
+	is multiline 
+*/
+type User struct {
+	// ID User
+	ID        int64     `json:"id,uuidTest"`
+	/* Name user */
+	Name      string    `json:"name" bson:""`
+	// User email.
+	// Test.
+	Email     string    `json:"email"`
+	Pass      string    `json:"pass"`
+}
