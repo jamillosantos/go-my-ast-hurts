@@ -89,7 +89,7 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) {
 			declStruct := NewStruct(currentPackage, s.Name.Name)
 			declStruct.Comment = comments
 			refType := getRefType(ctx, s.Name.Name)
-			refType.Type = declStruct
+			refType.AppendType(declStruct)
 
 			parseStruct(ctx, t, declStruct)
 			currentPackage.Types = append(currentPackage.Types, declStruct)
@@ -185,7 +185,6 @@ func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) {
 	method := NewMethodDescriptor(currentPackage, f.Name.Name)
 
 	if f.Recv != nil { //TODO(check): I don't know if this pointers always will exist if "f.Recv" is diff than nil.
-		structMethod := &StructMethod{}
 		recvList := f.Recv.List
 		for _, field := range recvList {
 			recv := MethodArgument{}
@@ -195,15 +194,6 @@ func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) {
 			recv.Type = getRefType(ctx, typeName)
 			method.Recv = append(method.Recv, recv)
 		}
-
-		structMethod.Descriptor = method
-		for _, s := range currentPackage.Structs { //TODO(enhancement): Is possible than the Struct has not been read before func.
-			if s.Name() == method.Recv[0].Type.Name {
-				s.Methods = append(s.Methods, structMethod)
-				break
-			}
-		}
-
 	}
 
 	for _, field := range f.Type.Params.List {
@@ -212,12 +202,13 @@ func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) {
 			argument.Name = field.Names[0].Name
 		}
 
-		t, ok := field.Type.(*ast.Ident)
-		if !ok {
-			fmt.Println("Treta")
-			continue
+		switch t := field.Type.(type) {
+		case *ast.Ident:
+			argument.Type = getRefType(ctx, t.Name)
+		case *ast.StarExpr:
+			argument.Type = getRefType(ctx, t.X.(*ast.Ident).Name)
 		}
-		argument.Type = getRefType(ctx, t.Name)
+
 		method.Arguments = append(method.Arguments, argument)
 	}
 	currentPackage.Methods = append(currentPackage.Methods, method)

@@ -4,7 +4,7 @@ func (u *User) getName() string {
 	return u.Name
 }
 
-func getName(u *User, name string) string {
+func getName_(u *User, name string) string {
 	u.Name = name
 	return name
 }

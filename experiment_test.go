@@ -232,13 +232,18 @@ var _ = Describe("My AST Hurts", func() {
 			pkg, ok := env.PackageByName("models")
 			Expect(ok).To(BeTrue())
 
+			Expect(pkg.Methods).To(HaveLen(2))
+
 			Expect(pkg.Structs).To(HaveLen(1))
-			Expect(pkg.Structs[0].Methods).To(HaveLen(1)) //TODO: Check receiver type before or after scan type
-			Expect(pkg.Structs[0].Methods[0].Descriptor.Name()).To(Equal("GetName"))
+			Expect(pkg.Structs[0].Methods).To(HaveLen(2))
+			Expect(pkg.Structs[0].Methods[0].Descriptor.Name()).To(Equal("getName"))
+			Expect(pkg.Structs[0].Methods[0].Descriptor.Arguments).To(HaveLen(0))
 			Expect(pkg.Structs[0].Methods[0].Descriptor.Recv).To(HaveLen(1))
 			Expect(pkg.Structs[0].Methods[0].Descriptor.Recv[0].Type.Type).To(Equal(pkg.Structs[0]))
 
-			Expect(pkg.Methods).To(HaveLen(2))
+			Expect(pkg.Structs[0].Methods[1].Descriptor.Name()).To(Equal("getName_"))
+			Expect(pkg.Structs[0].Methods[1].Descriptor.Arguments).To(HaveLen(2))
+			Expect(pkg.Structs[0].Methods[1].Descriptor.Arguments[0].Name).To(Equal("u"))
 
 		})
 

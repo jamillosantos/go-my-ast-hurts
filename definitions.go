@@ -61,6 +61,15 @@ type Struct struct {
 	Interfaces []*Interface
 }
 
+func (s *Struct) Package() *Package {
+	return s.pkg
+}
+
+func (s *Struct) Name() string {
+	return s.name
+}
+
+// NewStruct sdsdsds
 func NewStruct(pkg *Package, name string) *Struct {
 	srct := &Struct{
 		pkg:  pkg,
@@ -68,14 +77,6 @@ func NewStruct(pkg *Package, name string) *Struct {
 	}
 	pkg.AppendStruct(srct)
 	return srct
-}
-
-func (s *Struct) Package() *Package {
-	return s.pkg
-}
-
-func (s *Struct) Name() string {
-	return s.name
 }
 
 type Variable struct {
@@ -102,6 +103,24 @@ type RefType struct {
 func NewRefType(pkg *Package) *RefType {
 	return &RefType{
 		Pkg: pkg,
+	}
+}
+
+func (rt *RefType) AppendType(tp Type) {
+	if rt.Type == nil {
+		switch t := tp.(type) {
+		case *Struct:
+			var mDescriptor *StructMethod
+			for _, s := range t.Package().Methods {
+				mDescriptor = &StructMethod{
+					Descriptor: s,
+				}
+				t.Methods = append(t.Methods, mDescriptor)
+			}
+			rt.Type = tp
+		}
+	} else {
+		rt.Type = tp
 	}
 }
 
