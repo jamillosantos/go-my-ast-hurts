@@ -1,4 +1,3 @@
-// Package models is a test
 package models
 
 import (
@@ -6,7 +5,6 @@ import (
 	t "time"
 )
 
-// User is a model.
 type User struct {
 	ID        int64  `json:"id,uuidTest"`
 	Name      string `json:"name" bson:""`
@@ -14,6 +12,6 @@ type User struct {
 }
 
 func (u *User) getName() string {
-	fmt.Println("a")
+	fmt.Println(u.Name)
 	return u.Name
 }

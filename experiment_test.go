@@ -11,7 +11,7 @@ import (
 
 var _ = Describe("My AST Hurts", func() {
 
-	FContext("should parse struct", func() {
+	Context("should parse struct", func() {
 
 		It("should parse struct", func() {
 			fset := token.NewFileSet()
@@ -176,7 +176,7 @@ var _ = Describe("My AST Hurts", func() {
 
 	})
 
-	FContext("should parse function", func() {
+	Context("should parse function", func() {
 
 		It("should parse function", func() {
 
@@ -246,46 +246,34 @@ var _ = Describe("My AST Hurts", func() {
 			Expect(pkg.Structs[0].Methods[1].Descriptor.Arguments[0].Name).To(Equal("u"))
 
 		})
-
-		//TODO: should parse struct and func User
 	})
 
-	It("should parse imports", func() {
-		fset := token.NewFileSet()
-		f, err := parser.ParseFile(fset, "data/models8.sample", nil, parser.AllErrors)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(f).ToNot(BeNil())
-		Expect(f.Decls).ToNot(BeNil())
+	FContext("should parse imports", func() {
 
-		//ast.Print(fset, f)
-		env := myasthurts.NewEnvironment()
-		myasthurts.Parse(env, f)
-		// ---------- Tests struct tags - models8.sample ----------
+		It("should parse imports", func() {
+			fset := token.NewFileSet()
+			f, err := parser.ParseFile(fset, "data/models8.sample", nil, parser.AllErrors)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).ToNot(BeNil())
+			Expect(f.Decls).ToNot(BeNil())
 
-		pkg, ok := env.PackageByName("models")
+			//ast.Print(fset, f)
+			env := myasthurts.NewEnvironment()
+			myasthurts.Parse(env, f)
 
-		Expect(ok).To(BeTrue())
-		Expect(pkg.Name).To(Equal("models"))
+			models, _ := env.PackageByName("models")
+			fmt, _ := env.PackageByName("fmt")
+			time, _ := env.PackageByName("time")
 
-		Expect(pkg.Structs).To(HaveLen(1))
-		Expect(pkg.Structs[0].Methods).To(HaveLen(1))
-		Expect(pkg.Structs[0].Name()).To(Equal("User"))
-		Expect(pkg.Structs[0].Fields).To(HaveLen(3))
+			Expect(models).ToNot(BeNil())
+			Expect(fmt).ToNot(BeNil())
+			Expect(time).ToNot(BeNil())
 
-		Expect(pkg.Structs[0].Fields[0].Name).To(Equal("ID"))
-		Expect(pkg.Structs[0].Fields[1].Name).To(Equal("Name"))
-		Expect(pkg.Structs[0].Fields[2].Name).To(Equal("CreatedAt"))
+			Expect(models.Name).To(Equal("models"))
+			Expect(fmt.Name).To(Equal("fmt"))
+			Expect(time.Name).To(Equal("time"))
 
-		Expect(pkg.Structs[0].Fields[0].Type.Name).To(Equal("int64"))
-		Expect(pkg.Structs[0].Fields[1].Type.Name).To(Equal("string"))
-
-		time, okT := env.PackageByName("time")
-		Expect(okT).To(BeTrue())
-		Expect(pkg.Structs[0].Fields[2].Type.Name).To(Equal("t"))
-		Expect(time.Name).To(Equal("time"))
-
-		Expect(pkg.Methods).To(HaveLen(1))
-		Expect(pkg.Methods[0].Name()).To(Equal("getName"))
+		})
 
 	})
 
