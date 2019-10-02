@@ -110,14 +110,16 @@ func (rt *RefType) AppendType(tp Type) {
 	if rt.Type == nil {
 		switch t := tp.(type) {
 		case *Struct:
+			rt.Type = tp
 			var mDescriptor *StructMethod
 			for _, s := range t.Package().Methods {
-				mDescriptor = &StructMethod{
-					Descriptor: s,
+				if len(s.Recv) > 0 && s.Recv[0].Type != nil && s.Recv[0].Type.Type.Name() == t.Name() {
+					mDescriptor = &StructMethod{
+						Descriptor: s,
+					}
+					t.Methods = append(t.Methods, mDescriptor)
 				}
-				t.Methods = append(t.Methods, mDescriptor)
 			}
-			rt.Type = tp
 		}
 	} else {
 		rt.Type = tp

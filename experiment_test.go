@@ -48,36 +48,38 @@ var _ = Describe("My AST Hurts", func() {
 			Expect(pkg).NotTo(BeNil())
 
 			Expect(pkg.Structs).To(HaveLen(2))
-			Expect(pkg.Structs[0].Fields).To(HaveLen(3))
-			Expect(pkg.Structs[1].Fields).To(HaveLen(2))
+			Expect(pkg.Structs[0].Fields).To(HaveLen(2))
+			Expect(pkg.Structs[1].Fields).To(HaveLen(4))
 
 			Expect(pkg.Structs[0].Fields[0].Name).To(Equal("ID"))
 			Expect(pkg.Structs[0].Fields[1].Name).To(Equal("Name"))
-			Expect(pkg.Structs[0].Fields[2].Name).To(Equal("Email"))
 
 			Expect(pkg.Structs[0].Fields[0].Type).ToNot(Equal(BeNil()))
 			Expect(pkg.Structs[0].Fields[1].Type).ToNot(Equal(BeNil()))
-			Expect(pkg.Structs[0].Fields[2].Type).ToNot(Equal(BeNil()))
 
 			Expect(pkg.Structs[0].Fields[0].Type.Name).To(Equal("int64"))
 			Expect(pkg.Structs[0].Fields[1].Type.Name).To(Equal("string"))
-			Expect(pkg.Structs[0].Fields[2].Type.Name).To(Equal("string"))
 
 			Expect(pkg.Structs[0].Fields[0].Type.Type).To(BeNil())
 			Expect(pkg.Structs[0].Fields[1].Type.Type).To(BeNil())
-			Expect(pkg.Structs[0].Fields[2].Type.Type).To(BeNil())
 
 			Expect(pkg.Structs[1].Fields[0].Name).To(Equal("ID"))
 			Expect(pkg.Structs[1].Fields[1].Name).To(Equal("Address"))
+			Expect(pkg.Structs[1].Fields[2].Name).To(Equal("User"))
 
 			Expect(pkg.Structs[1].Fields[0].Type).ToNot(Equal(BeNil()))
 			Expect(pkg.Structs[1].Fields[1].Type).ToNot(Equal(BeNil()))
+			Expect(pkg.Structs[1].Fields[2].Type).ToNot(Equal(BeNil()))
 
 			Expect(pkg.Structs[1].Fields[0].Type.Name).To(Equal("int64"))
 			Expect(pkg.Structs[1].Fields[1].Type.Name).To(Equal("string"))
+			Expect(pkg.Structs[1].Fields[2].Type.Name).To(Equal("User"))
+			Expect(pkg.Structs[1].Fields[3].Type.Name).To(Equal("User"))
 
 			Expect(pkg.Structs[1].Fields[0].Type.Type).To(BeNil())
 			Expect(pkg.Structs[1].Fields[1].Type.Type).To(BeNil())
+			Expect(pkg.Structs[1].Fields[2].Type.Type).To(Equal(pkg.Structs[0]))
+			Expect(pkg.Structs[1].Fields[3].Type.Type).To(Equal(pkg.Structs[0]))
 
 		})
 
@@ -235,20 +237,19 @@ var _ = Describe("My AST Hurts", func() {
 			Expect(pkg.Methods).To(HaveLen(2))
 
 			Expect(pkg.Structs).To(HaveLen(1))
-			Expect(pkg.Structs[0].Methods).To(HaveLen(2))
+			Expect(pkg.Structs[0].Methods).To(HaveLen(1))
 			Expect(pkg.Structs[0].Methods[0].Descriptor.Name()).To(Equal("getName"))
 			Expect(pkg.Structs[0].Methods[0].Descriptor.Arguments).To(HaveLen(0))
 			Expect(pkg.Structs[0].Methods[0].Descriptor.Recv).To(HaveLen(1))
 			Expect(pkg.Structs[0].Methods[0].Descriptor.Recv[0].Type.Type).To(Equal(pkg.Structs[0]))
 
-			Expect(pkg.Structs[0].Methods[1].Descriptor.Name()).To(Equal("getName_"))
-			Expect(pkg.Structs[0].Methods[1].Descriptor.Arguments).To(HaveLen(2))
-			Expect(pkg.Structs[0].Methods[1].Descriptor.Arguments[0].Name).To(Equal("u"))
+			Expect(pkg.Methods[0].Name()).To(Equal("getName"))
+			Expect(pkg.Methods[1].Name()).To(Equal("getName_"))
 
 		})
 	})
 
-	FContext("should parse imports", func() {
+	Context("should parse imports", func() {
 
 		It("should parse imports", func() {
 			fset := token.NewFileSet()

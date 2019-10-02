@@ -138,6 +138,8 @@ func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struc
 			refType = getRefType(ctx, t.Name)
 		case *ast.SelectorExpr:
 			refType = getRefType(ctx, t.X.(*ast.Ident).Name)
+		case *ast.StarExpr:
+			refType = getRefType(ctx, t.X.(*ast.Ident).Name)
 		}
 
 		f := &Field{}
