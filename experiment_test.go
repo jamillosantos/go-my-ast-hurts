@@ -278,105 +278,41 @@ var _ = Describe("My AST Hurts", func() {
 
 	})
 
-	It("should parse types in struct", func() {
+	Context("should parse comments", func() {
 
-		fset := token.NewFileSet()
-		f, err := parser.ParseFile(fset, "data/models9.sample", nil, parser.AllErrors)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(f).ToNot(BeNil())
-		Expect(f.Decls).ToNot(BeNil())
+		It("should parse multilines or no in struct comments", func() {
+			fset := token.NewFileSet()
+			f, err := parser.ParseFile(fset, "data/models9.sample", nil, parser.ParseComments)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).ToNot(BeNil())
+			Expect(f.Decls).ToNot(BeNil())
 
-		//ast.Print(fset, f)
-		env := myasthurts.NewEnvironment()
-		myasthurts.Parse(env, f)
-		// ---------- Tests struct tags - models9.sample ----------
+			//ast.Print(fset, f)
+			env := myasthurts.NewEnvironment()
+			myasthurts.Parse(env, f)
 
-		pkg, ok := env.PackageByName("models")
+			pkg, ok := env.PackageByName("models")
+			Expect(ok).To(BeTrue())
 
-		Expect(ok).To(BeTrue())
-		Expect(pkg.Structs).To(HaveLen(2))
+			Expect(pkg.Comment).To(HaveLen(1))
+			Expect(pkg.Comment[0]).To(Equal("// Package models is a test"))
 
-		Expect(pkg.Structs[0].Name()).To(Equal("Compra"))
-		Expect(pkg.Structs[1].Name()).To(Equal("User"))
+			Expect(pkg.Structs).To(HaveLen(2))
+			Expect(pkg.Structs[0].Comment).To(HaveLen(1))
+			Expect(pkg.Structs[0].Comment[0]).To(Equal("/* Testing comment\nnew line\n*/"))
+			Expect(pkg.Structs[0].Fields).To(HaveLen(2))
+			Expect(pkg.Structs[0].Fields[0].Comment).To(HaveLen(1))
+			Expect(pkg.Structs[0].Fields[0].Comment[0]).To(Equal("// ID comment"))
+			Expect(pkg.Structs[0].Fields[1].Comment).To(HaveLen(1))
+			Expect(pkg.Structs[0].Fields[1].Comment[0]).To(Equal("/* Comment with multilines\n\t\tTesting\n\t*/"))
 
-		Expect(pkg.Structs[0].Fields).To(HaveLen(2))
-		Expect(pkg.Structs[0].Fields[1].Type).ToNot(BeNil())
+			Expect(pkg.Structs[1].Fields).To(HaveLen(3))
+			Expect(pkg.Structs[1].Fields[1].Comment).To(HaveLen(2))
+			Expect(pkg.Structs[1].Fields[1].Comment[0]).To(Equal("// Line 1"))
+			Expect(pkg.Structs[1].Fields[1].Comment[1]).To(Equal("// Line 2"))
 
-		refType, _ := pkg.RefTypeByName("string")
-		Expect(refType).ToNot(BeNil())
-
-		Expect(pkg.Structs[0].Fields[1].Type.Pkg).To(Equal(refType.Pkg))
-
-	})
-
-	It("should parse multi line comments in struct", func() {
-		fset := token.NewFileSet()
-		f, err := parser.ParseFile(fset, "data/models11.sample", nil, parser.ParseComments)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(f).ToNot(BeNil())
-		Expect(f.Decls).ToNot(BeNil())
-
-		env := myasthurts.NewEnvironment()
-		myasthurts.Parse(env, f)
-
-		pkg, ok := env.PackageByName("models")
-		Expect(ok).To(BeTrue())
-
-		Expect(pkg.Structs).To(HaveLen(1))
-		Expect(pkg.Structs[0].Comment).To(HaveLen(2))
+		})
 
 	})
-
-	It("should parse multi line comments in struct field", func() {
-		fset := token.NewFileSet()
-		f, err := parser.ParseFile(fset, "data/models12.sample", nil, parser.ParseComments)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(f).ToNot(BeNil())
-		Expect(f.Decls).ToNot(BeNil())
-
-		env := myasthurts.NewEnvironment()
-		myasthurts.Parse(env, f)
-
-		pkg, ok := env.PackageByName("models")
-		Expect(ok).To(BeTrue())
-
-		Expect(pkg.Structs).To(HaveLen(1))
-		Expect(pkg.Structs[0].Comment).To(BeEmpty())
-		Expect(pkg.Structs[0].Fields).To(HaveLen(2))
-		Expect(pkg.Structs[0].Fields[1].Comment).To(HaveLen(2))
-
-	})
-
-	/*It("should parse comments in struct", func() {
-		fset := token.NewFileSet()
-		f, err := parser.ParseFile(fset, "data/models10.sample", nil, parser.ParseComments)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(f).ToNot(BeNil())
-		Expect(f.Decls).ToNot(BeNil())
-
-		//ast.Print(fset, f)
-		env := myasthurts.NewEnvironment()
-		myasthurts.Parse(env, f)
-		// ---------- Tests struct tags - models10.sample ----------
-
-		pkg, ok := env.PackageByName("models")
-		Expect(ok).To(BeTrue())
-
-		Expect(pkg.Comment).To(HaveLen(1))
-
-		Expect(pkg.Structs).To(HaveLen(2))
-
-		Expect(pkg.Structs[0].Comment).To(HaveLen(2))
-		Expect(pkg.Structs[1].Comment).To(HaveLen(1))
-
-		Expect(pkg.Structs[0].Comment[0]).To(Equal("// Struct type Compra"))
-		Expect(pkg.Structs[0].Comment[1]).To(Equal("// Test New line test"))
-
-		Expect(pkg.Structs[1].Comment[0]).To(Equal("/** Comment for test\ntext for more test\ntesting comments "))
-
-		Expect(pkg.Structs[1].Fields).To(HaveLen(3))
-		Expect(pkg.Structs[1].Fields[0].Comment).To(HaveLen(1))
-
-	})*/
 
 })
