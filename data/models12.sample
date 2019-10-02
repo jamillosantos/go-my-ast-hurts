@@ -1,8 +1,0 @@
-package models
-
-type Compra struct {
-	ID   int64 `json:"id"`
-    // Struct type Compra
-    // Test New line test
-	User User  `json:"name"`
-}
