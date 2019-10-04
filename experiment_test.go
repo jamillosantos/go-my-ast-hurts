@@ -336,8 +336,6 @@ var _ = Describe("My AST Hurts", func() {
 			Expect(pkg.Methods[1].Comment).To(HaveLen(1))
 			Expect(pkg.Methods[1].Comment[0]).To(Equal("/** Description \n    multilines\n*/"))
 
-			//Expect(pkg.Comment).To(HaveLen(6))
-
 		})
 
 	})
