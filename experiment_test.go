@@ -294,7 +294,7 @@ var _ = Describe("My AST Hurts", func() {
 			pkg, ok := env.PackageByName("models")
 			Expect(ok).To(BeTrue())
 
-			Expect(pkg.Comment).To(HaveLen(1))
+			Expect(pkg.Comment).To(HaveLen(8))
 			Expect(pkg.Comment[0]).To(Equal("// Package models is a test"))
 
 			Expect(pkg.Structs).To(HaveLen(2))
@@ -310,6 +310,33 @@ var _ = Describe("My AST Hurts", func() {
 			Expect(pkg.Structs[1].Fields[1].Comment).To(HaveLen(2))
 			Expect(pkg.Structs[1].Fields[1].Comment[0]).To(Equal("// Line 1"))
 			Expect(pkg.Structs[1].Fields[1].Comment[1]).To(Equal("// Line 2"))
+
+		})
+
+		It("should parse comments in func", func() {
+			fset := token.NewFileSet()
+			f, err := parser.ParseFile(fset, "data/models10.sample", nil, parser.ParseComments)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).ToNot(BeNil())
+			Expect(f.Decls).ToNot(BeNil())
+
+			//ast.Print(fset, f)
+			env := myasthurts.NewEnvironment()
+			myasthurts.Parse(env, f)
+
+			pkg, ok := env.PackageByName("models")
+			Expect(ok).To(BeTrue())
+
+			Expect(pkg.Comment).To(HaveLen(7))
+			Expect(pkg.Comment[0]).To(Equal("// Package models is a test"))
+
+			Expect(pkg.Methods).To(HaveLen(3))
+			Expect(pkg.Methods[0].Comment).To(HaveLen(1))
+			Expect(pkg.Methods[0].Comment[0]).To(Equal("// Comment here"))
+			Expect(pkg.Methods[1].Comment).To(HaveLen(1))
+			Expect(pkg.Methods[1].Comment[0]).To(Equal("/** Description \n    multilines\n*/"))
+
+			//Expect(pkg.Comment).To(HaveLen(6))
 
 		})
 
