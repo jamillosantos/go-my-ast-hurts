@@ -212,6 +212,15 @@ func (p *Package) RefTypeByName(name string) (*RefType, bool) {
 	return nil, false
 }
 
+func (p *Package) AppendRefType(name string) *RefType {
+	ref := &RefType{
+		Pkg:  p,
+		Name: name,
+	}
+	p.RefType = append(p.RefType, ref)
+	return ref
+}
+
 type Environment struct {
 	packages    []*Package
 	packagesMap map[string]*Package

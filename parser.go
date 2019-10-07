@@ -1,8 +1,12 @@
 package myasthurts
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
+	"go/parser"
+	"go/token"
+	"os"
 
 	"github.com/fatih/structtag"
 )
@@ -18,7 +22,26 @@ func (p *parseContext) PackageByName(name string) (*Package, bool) {
 	return pkg, ok
 }
 
-func Parse(env *Environment, file *ast.File) {
+func (ctx *parseContext) initBuiltin() (err error) {
+	if ctx.File.Name.Name == "builtin" {
+		return
+	}
+	directory := os.Getenv("GOROOT")
+	if directory == "" {
+		return errors.New("GOROOT environment variable not found or is empty")
+	}
+	builtinFile := fmt.Sprintf("%s/src/builtin/builtin.go", directory)
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, builtinFile, nil, parser.AllErrors)
+	if err != nil {
+		return err
+	}
+
+	Parse(ctx.Env, f)
+	return
+}
+
+func Parse(env *Environment, file *ast.File) (err error) {
 
 	ctx := &parseContext{
 		File:        file,
@@ -26,6 +49,10 @@ func Parse(env *Environment, file *ast.File) {
 		PackagesMap: make(map[string]*Package),
 	}
 
+	err = ctx.initBuiltin()
+	if err != nil {
+		return err
+	}
 	parsePackage(ctx)
 
 	decls := file.Decls
@@ -37,6 +64,7 @@ func Parse(env *Environment, file *ast.File) {
 			parseFuncDecl(ctx, c)
 		}
 	}
+	return
 }
 
 func parsePackage(ctx *parseContext) {
@@ -103,7 +131,12 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments *[]string) {
 
 			parseStruct(ctx, t, declStruct)
 			currentPackage.Types = append(currentPackage.Types, declStruct)
+		case *ast.Ident:
+			if ctx.File.Name.Name == "builtin" {
+				currentPackage.AppendRefType(t.Name)
+			}
 		}
+
 	case *ast.ImportSpec:
 		namePkg := s.Path.Value[1 : len(s.Path.Value)-1]
 		if s.Name != nil {
@@ -134,7 +167,7 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments *[]string) {
 			getRefType(ctx, namePkg)
 		}
 	case *ast.ValueSpec:
-		parseVariable(currentPackage, s)
+		//parseVariable(currentPackage, s)
 	}
 }
 
@@ -257,23 +290,23 @@ func parseVariable(parent *Package, f *ast.ValueSpec) {
 	}
 }
 
-//This method is temp.
+/* 	### This method is temp ###
+I don't know if always is necessary check types in builtin package and current package.
+*/
 func getRefType(ctx *parseContext, name string) *RefType {
-	packageCurrent := ctx.PackagesMap[ctx.File.Name.Name]
+	builtinPackage, ok := ctx.Env.PackageByName("builtin")
+	if ok {
+		refType, ok := builtinPackage.RefTypeByName(name)
+		if ok {
+			return refType
+		}
+	}
 
+	packageCurrent := ctx.PackagesMap[ctx.File.Name.Name]
 	for _, pr := range packageCurrent.RefType {
 		if name == pr.Name && packageCurrent == pr.Pkg {
 			return pr
 		}
 	}
-	return newRefType(packageCurrent, name)
-}
-
-func newRefType(parent *Package, name string) *RefType {
-	ref := &RefType{
-		Pkg:  parent,
-		Name: name,
-	}
-	parent.RefType = append(parent.RefType, ref)
-	return ref
+	return packageCurrent.AppendRefType(name)
 }

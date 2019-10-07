@@ -3,6 +3,7 @@ package myasthurts_test
 import (
 	"go/parser"
 	"go/token"
+	"os"
 
 	myasthurts "github.com/jamillosantos/go-my-ast-hurts"
 	. "github.com/onsi/ginkgo"
@@ -276,6 +277,21 @@ var _ = Describe("My AST Hurts", func() {
 
 		})
 
+		PIt("should parse imports with dots", func() {
+			fset := token.NewFileSet()
+			f, err := parser.ParseFile(fset, "data/models11.sample", nil, parser.AllErrors)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).ToNot(BeNil())
+			Expect(f.Decls).ToNot(BeNil())
+
+			//ast.Print(fset, f)
+			env := myasthurts.NewEnvironment()
+			myasthurts.Parse(env, f)
+
+			// TODO(Jeconias): parse imports with dots
+
+		})
+
 	})
 
 	Context("should parse comments", func() {
@@ -335,6 +351,76 @@ var _ = Describe("My AST Hurts", func() {
 			Expect(pkg.Methods[0].Comment[0]).To(Equal("// Comment here"))
 			Expect(pkg.Methods[1].Comment).To(HaveLen(1))
 			Expect(pkg.Methods[1].Comment[0]).To(Equal("/** Description \n    multilines\n*/"))
+
+		})
+
+	})
+
+	Context("should parse builtin file and check types with another files", func() {
+		It("should Parse builtin file", func() {
+			fset := token.NewFileSet()
+			f, err := parser.ParseFile(fset, os.Getenv("GOROOT")+"/src/builtin/builtin.go", nil, parser.AllErrors)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).ToNot(BeNil())
+			Expect(f.Decls).ToNot(BeNil())
+
+			//ast.Print(fset, f)
+			env := myasthurts.NewEnvironment()
+			myasthurts.Parse(env, f)
+
+			b, ok := env.PackageByName("builtin")
+			Expect(ok).To(BeTrue())
+			Expect(b.RefType).To(HaveLen(27))
+
+			Expect(b.RefType[0].Name).To(Equal("bool"))
+			Expect(b.RefType[1].Name).To(Equal("uint8"))
+			Expect(b.RefType[2].Name).To(Equal("uint16"))
+			Expect(b.RefType[3].Name).To(Equal("uint32"))
+			Expect(b.RefType[4].Name).To(Equal("uint64"))
+			Expect(b.RefType[5].Name).To(Equal("int8"))
+			Expect(b.RefType[6].Name).To(Equal("int16"))
+			Expect(b.RefType[7].Name).To(Equal("int32"))
+			Expect(b.RefType[8].Name).To(Equal("int64"))
+			Expect(b.RefType[9].Name).To(Equal("float32"))
+			Expect(b.RefType[10].Name).To(Equal("float64"))
+			Expect(b.RefType[11].Name).To(Equal("complex64"))
+			Expect(b.RefType[12].Name).To(Equal("complex128"))
+			Expect(b.RefType[13].Name).To(Equal("string"))
+			Expect(b.RefType[14].Name).To(Equal("int"))
+			Expect(b.RefType[15].Name).To(Equal("uint"))
+			Expect(b.RefType[16].Name).To(Equal("uintptr"))
+			Expect(b.RefType[17].Name).ToNot(Equal("byte")) // byte is an alias for uint8 and is equivalent to uint8 in all ways | byte = uint8
+
+			//TODO(Jeconias): Check all types
+		})
+
+		It("should parse struct with builtin file", func() {
+
+			fset := token.NewFileSet()
+			f, err := parser.ParseFile(fset, "data/models6.sample", nil, parser.AllErrors)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(f).ToNot(BeNil())
+			Expect(f.Decls).ToNot(BeNil())
+
+			env := myasthurts.NewEnvironment()
+			err = myasthurts.Parse(env, f)
+			Expect(err).To(BeNil())
+
+			pkgM, okM := env.PackageByName("models")
+			pkgB, okB := env.PackageByName("builtin")
+			Expect(okM).To(BeTrue())
+			Expect(okB).To(BeTrue())
+
+			Expect(pkgM.Methods).To(HaveLen(3))
+			Expect(pkgM.Methods[1].Arguments).To(HaveLen(2))
+
+			stringType, ok := pkgB.RefTypeByName("string")
+			Expect(ok).To(BeTrue())
+			Expect(pkgM.Methods[1].Arguments[0].Type).To(Equal(stringType))
+
+			stringType, ok = pkgB.RefTypeByName("int64")
+			Expect(ok).To(BeTrue())
+			Expect(pkgM.Methods[1].Arguments[1].Type).To(Equal(stringType))
 
 		})
 
