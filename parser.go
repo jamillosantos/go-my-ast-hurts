@@ -11,10 +11,16 @@ import (
 	"github.com/fatih/structtag"
 )
 
-type parseContext struct {
-	File        *ast.File
-	Env         *Environment
-	PackagesMap map[string]*Package
+func (env *environment) makeEnv() (exrr error) {
+
+	directory := os.Getenv("GOROOT")
+	if directory == "" {
+		return errors.New("GOROOT environment variable not found or is empty")
+	}
+	builtinFile := fmt.Sprintf("%s/src/builtin/builtin.go", directory)
+
+	env.parse(builtinFile)
+	return
 }
 
 func (p *parseContext) PackageByName(name string) (*Package, bool) {
@@ -22,26 +28,17 @@ func (p *parseContext) PackageByName(name string) (*Package, bool) {
 	return pkg, ok
 }
 
-func (ctx *parseContext) initBuiltin() (err error) {
-	if ctx.File.Name.Name == "builtin" {
-		return
-	}
-	directory := os.Getenv("GOROOT")
-	if directory == "" {
-		return errors.New("GOROOT environment variable not found or is empty")
-	}
-	builtinFile := fmt.Sprintf("%s/src/builtin/builtin.go", directory)
-	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, builtinFile, nil, parser.AllErrors)
-	if err != nil {
-		return err
-	}
+func (env *environment) parse(fileLocation string) (exrr error) {
 
-	Parse(ctx.Env, f)
-	return
-}
+	var (
+		file *ast.File
+		fset *token.FileSet
+	)
 
-func Parse(env *Environment, file *ast.File) (err error) {
+	fset = token.NewFileSet()
+	if file, exrr = parser.ParseFile(fset, fileLocation, nil, parser.ParseComments); exrr != nil {
+		return exrr
+	}
 
 	ctx := &parseContext{
 		File:        file,
@@ -49,11 +46,7 @@ func Parse(env *Environment, file *ast.File) (err error) {
 		PackagesMap: make(map[string]*Package),
 	}
 
-	err = ctx.initBuiltin()
-	if err != nil {
-		return err
-	}
-	parsePackage(ctx)
+	parseFileName(ctx)
 
 	decls := file.Decls
 	for _, d := range decls {
@@ -67,7 +60,7 @@ func Parse(env *Environment, file *ast.File) (err error) {
 	return
 }
 
-func parsePackage(ctx *parseContext) {
+func parseFileName(ctx *parseContext) {
 
 	_, ok := ctx.Env.PackageByName(ctx.File.Name.Name)
 	if !ok {
@@ -117,7 +110,7 @@ func parseGenDecl(ctx *parseContext, s *ast.GenDecl) {
 	}
 }
 
-func parseSpec(ctx *parseContext, spec ast.Spec, comments *[]string) {
+func parseSpec(ctx *parseContext, spec ast.Spec, comments *[]string) (e error) {
 	currentPackage := ctx.PackagesMap[ctx.File.Name.Name]
 
 	switch s := spec.(type) {
@@ -142,10 +135,18 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments *[]string) {
 		if s.Name != nil {
 			_, ok := ctx.PackageByName(s.Name.Name)
 			if !ok {
-				newPkg := &Package{
-					Name: namePkg,
+				newPkg := &Package{}
+				if s.Name.Name != "." {
+					newPkg.Name = namePkg
+					ctx.PackagesMap[s.Name.Name] = newPkg
+				} else {
+					namePkg = s.Name.Name + namePkg
+					newPkg.Name = namePkg
+					ctx.PackagesMap[namePkg] = newPkg
+
+					// TODO(Jeconias): Parse imports with dots
+
 				}
-				ctx.PackagesMap[s.Name.Name] = newPkg
 				_, ok := ctx.Env.PackageByName(namePkg)
 				if !ok {
 					ctx.Env.AppendPackage(newPkg)
@@ -169,6 +170,7 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments *[]string) {
 	case *ast.ValueSpec:
 		//parseVariable(currentPackage, s)
 	}
+	return
 }
 
 func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struct) {

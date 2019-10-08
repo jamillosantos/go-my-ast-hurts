@@ -1,5 +1,20 @@
 package myasthurts
 
+import (
+	"errors"
+	"fmt"
+	"go/ast"
+	"io/ioutil"
+	"os"
+	"regexp"
+)
+
+type parseContext struct {
+	File        *ast.File
+	Env         *environment
+	PackagesMap map[string]*Package
+}
+
 type Type interface {
 	Package() *Package
 	Name() string
@@ -221,24 +236,56 @@ func (p *Package) AppendRefType(name string) *RefType {
 	return ref
 }
 
-type Environment struct {
+type environment struct {
 	packages    []*Package
 	packagesMap map[string]*Package
 }
 
-func NewEnvironment() *Environment {
-	return &Environment{
+func NewEnvironment() (env *environment, exrr error) {
+
+	env = &environment{
 		packages:    []*Package{},
 		packagesMap: map[string]*Package{},
 	}
+
+	if exrr = env.makeEnv(); exrr != nil {
+		return nil, exrr
+	}
+	return env, nil
 }
 
-func (e *Environment) PackageByName(name string) (*Package, bool) {
+func (e *environment) PackageByName(name string) (*Package, bool) {
 	pkg, ok := e.packagesMap[name]
 	return pkg, ok
 }
 
-func (e *Environment) AppendPackage(pkg *Package) {
+func (e *environment) AppendPackage(pkg *Package) {
 	e.packages = append(e.packages, pkg)
 	e.packagesMap[pkg.Name] = pkg
+}
+
+func (e *environment) ParsePackage(path string, isFile bool) (exrr error) {
+
+	if isFile {
+		if _, ok := os.Stat(path); os.IsNotExist(ok) {
+			return errors.New("File not found")
+		}
+		e.parse(path)
+	} else {
+		files, err := ioutil.ReadDir(path)
+		if err != nil {
+			return err
+		}
+
+		for _, file := range files {
+			fileName := file.Name()
+			if s, _ := regexp.MatchString(`(?ms)test\b`, fileName); s {
+				continue
+			}
+			fileLocation := fmt.Sprintf("%s/%s", path, fileName)
+			e.parse(fileLocation)
+		}
+	}
+
+	return
 }
