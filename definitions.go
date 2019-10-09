@@ -128,7 +128,7 @@ func (rt *RefType) AppendType(tp Type) {
 			rt.Type = tp
 			var mDescriptor *StructMethod
 			for _, s := range t.Package().Methods {
-				if len(s.Recv) > 0 && s.Recv[0].Type != nil && s.Recv[0].Type.Type.Name() == t.Name() {
+				if len(s.Recv) > 0 && s.Recv[0].Type != nil && s.Recv[0].Type.Name == t.Name() {
 					mDescriptor = &StructMethod{
 						Descriptor: s,
 					}
@@ -264,15 +264,15 @@ func (e *environment) AppendPackage(pkg *Package) {
 	e.packagesMap[pkg.Name] = pkg
 }
 
-func (e *environment) ParsePackage(path string, isFile bool) (exrr error) {
+func (e *environment) ParsePackage(pathOrName string, isFile bool) (exrr error) {
 
 	if isFile {
-		if _, ok := os.Stat(path); os.IsNotExist(ok) {
+		if _, ok := os.Stat(pathOrName); os.IsNotExist(ok) {
 			return errors.New("File not found")
 		}
-		e.parse(path)
+		e.parse(pathOrName)
 	} else {
-		files, err := ioutil.ReadDir(path)
+		files, err := ioutil.ReadDir(pathOrName)
 		if err != nil {
 			return err
 		}
@@ -282,10 +282,18 @@ func (e *environment) ParsePackage(path string, isFile bool) (exrr error) {
 			if s, _ := regexp.MatchString(`(?ms)test\b`, fileName); s {
 				continue
 			}
-			fileLocation := fmt.Sprintf("%s/%s", path, fileName)
+			fileLocation := fmt.Sprintf("%s/%s", pathOrName, fileName)
 			e.parse(fileLocation)
 		}
 	}
 
 	return
+}
+
+func (env *environment) basePath() (rtn string, exrr error) {
+
+	if rtn = os.Getenv("GOROOT"); rtn == "" {
+		return "", errors.New("GOROOT environment variable not found or is empty")
+	}
+	return fmt.Sprintf("%s/src", rtn), nil
 }

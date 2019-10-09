@@ -1,23 +1,22 @@
 package myasthurts
 
 import (
-	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 
 	"github.com/fatih/structtag"
 )
 
 func (env *environment) makeEnv() (exrr error) {
 
-	directory := os.Getenv("GOROOT")
-	if directory == "" {
-		return errors.New("GOROOT environment variable not found or is empty")
+	path := ""
+	if path, exrr = env.basePath(); exrr != nil {
+		return exrr
 	}
-	builtinFile := fmt.Sprintf("%s/src/builtin/builtin.go", directory)
+
+	builtinFile := fmt.Sprintf("%s/builtin/builtin.go", path)
 
 	env.parse(builtinFile)
 	return
@@ -38,6 +37,11 @@ func (env *environment) parse(fileLocation string) (exrr error) {
 	fset = token.NewFileSet()
 	if file, exrr = parser.ParseFile(fset, fileLocation, nil, parser.ParseComments); exrr != nil {
 		return exrr
+	}
+
+	if file.Name.Name == "builtin" {
+
+		ast.Print(fset, file)
 	}
 
 	ctx := &parseContext{
@@ -62,7 +66,7 @@ func (env *environment) parse(fileLocation string) (exrr error) {
 
 func parseFileName(ctx *parseContext) {
 
-	_, ok := ctx.Env.PackageByName(ctx.File.Name.Name)
+	pkge, ok := ctx.Env.PackageByName(ctx.File.Name.Name)
 	if !ok {
 		var comments []string
 		if ctx.File.Doc != nil {
@@ -76,6 +80,8 @@ func parseFileName(ctx *parseContext) {
 		}
 		ctx.Env.AppendPackage(pkg)
 		ctx.PackagesMap[ctx.File.Name.Name] = pkg
+	} else {
+		ctx.PackagesMap[ctx.File.Name.Name] = pkge
 	}
 }
 
@@ -110,7 +116,7 @@ func parseGenDecl(ctx *parseContext, s *ast.GenDecl) {
 	}
 }
 
-func parseSpec(ctx *parseContext, spec ast.Spec, comments *[]string) (e error) {
+func parseSpec(ctx *parseContext, spec ast.Spec, comments *[]string) (exrr error) {
 	currentPackage := ctx.PackagesMap[ctx.File.Name.Name]
 
 	switch s := spec.(type) {
@@ -120,6 +126,7 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments *[]string) (e error) {
 			declStruct := NewStruct(currentPackage, s.Name.Name)
 			declStruct.Comment = *comments
 			refType := getRefType(ctx, s.Name.Name)
+
 			refType.AppendType(declStruct)
 
 			parseStruct(ctx, t, declStruct)
@@ -136,20 +143,26 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments *[]string) (e error) {
 			_, ok := ctx.PackageByName(s.Name.Name)
 			if !ok {
 				newPkg := &Package{}
+				newPkg.Name = namePkg
 				if s.Name.Name != "." {
-					newPkg.Name = namePkg
 					ctx.PackagesMap[s.Name.Name] = newPkg
-				} else {
-					namePkg = s.Name.Name + namePkg
-					newPkg.Name = namePkg
-					ctx.PackagesMap[namePkg] = newPkg
-
-					// TODO(Jeconias): Parse imports with dots
-
-				}
-				_, ok := ctx.Env.PackageByName(namePkg)
-				if !ok {
 					ctx.Env.AppendPackage(newPkg)
+				} else {
+
+					if _, isTrue := ctx.Env.PackageByName(namePkg); isTrue {
+						return
+					}
+
+					basePath := ""
+					if basePath, exrr = ctx.Env.basePath(); exrr != nil {
+						return exrr
+					}
+
+					basePath = fmt.Sprintf("%s/%s", basePath, namePkg)
+					if exrr = ctx.Env.ParsePackage(basePath, false); exrr != nil {
+						return exrr
+					}
+					ctx.PackagesMap[namePkg], _ = ctx.Env.PackageByName(namePkg)
 				}
 			}
 			getRefType(ctx, s.Name.Name)
@@ -185,7 +198,7 @@ func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struc
 			refType = getRefType(ctx, t.X.(*ast.Ident).Name)
 		case *ast.StarExpr:
 			refType = getRefType(ctx, t.X.(*ast.Ident).Name)
-		}
+		} //interface conversion: ast.Expr is *ast.SelectorExpr, not *ast.Ident
 
 		f := &Field{}
 		f.Type = refType
@@ -304,7 +317,12 @@ func getRefType(ctx *parseContext, name string) *RefType {
 		}
 	}
 
+	//fmt.Println(ctx.File.Name.Name + "|" + name)
+
 	packageCurrent := ctx.PackagesMap[ctx.File.Name.Name]
+
+	//fmt.Println(packageCurrent.Name)
+
 	for _, pr := range packageCurrent.RefType {
 		if name == pr.Name && packageCurrent == pr.Pkg {
 			return pr

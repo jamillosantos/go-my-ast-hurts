@@ -221,7 +221,7 @@ var _ = Describe("My AST Hurts", func() {
 
 	Context("should parse imports", func() {
 
-		It("should parse imports", func() {
+		FIt("should parse imports", func() {
 
 			env, exrr := myasthurts.NewEnvironment()
 			Expect(exrr).To(BeNil())
@@ -232,14 +232,17 @@ var _ = Describe("My AST Hurts", func() {
 			models, _ := env.PackageByName("models")
 			fmt, _ := env.PackageByName("fmt")
 			time, _ := env.PackageByName("time")
+			os, _ := env.PackageByName("os")
 
 			Expect(models).ToNot(BeNil())
 			Expect(fmt).ToNot(BeNil())
 			Expect(time).ToNot(BeNil())
+			Expect(os).ToNot(BeNil())
 
 			Expect(models.Name).To(Equal("models"))
 			Expect(fmt.Name).To(Equal("fmt"))
 			Expect(time.Name).To(Equal("time"))
+			Expect(os).To(Equal("os"))
 
 		})
 
@@ -255,9 +258,10 @@ var _ = Describe("My AST Hurts", func() {
 
 			fmtPkg, ok := env.PackageByName("fmt")
 			Expect(ok).To(BeTrue())
-			Expect(fmtPkg.Name).To(Equal("fmt"))
+			Expect(fmtPkg.RefType).To(HaveLen(21))
 
 			// TODO(Jeconias): parse imports with dots
+			// OBS: Test not finalized
 		})
 
 	})
