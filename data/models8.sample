@@ -2,7 +2,6 @@ package models
 
 import (
 	"fmt"
-	. "os"
 	t "time"
 )
 
@@ -13,10 +12,6 @@ type User struct {
 }
 
 func (u *User) getName() string {
-	_, ok := Stat("file.go")
-	if IsNotExist(ok) {
-		return "File not found"
-	}
 	fmt.Println(u.Name)
 	return u.Name
 }
