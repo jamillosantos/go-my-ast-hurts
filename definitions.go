@@ -84,7 +84,7 @@ func (s *Struct) Name() string {
 	return s.name
 }
 
-// NewStruct sdsdsds
+// NewStruct
 func NewStruct(pkg *Package, name string) *Struct {
 	srct := &Struct{
 		pkg:  pkg,
@@ -216,6 +216,16 @@ type Package struct {
 
 func (p *Package) AppendStruct(s *Struct) {
 	p.Structs = append(p.Structs, s)
+}
+
+//method tmp
+func (p *Package) StructByName(name string) *Struct {
+	for _, e := range p.Structs {
+		if e.Name() == name {
+			return e
+		}
+	}
+	return nil
 }
 
 func (p *Package) RefTypeByName(name string) (*RefType, bool) {

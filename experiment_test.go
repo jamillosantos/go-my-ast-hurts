@@ -6,11 +6,11 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("My AST Hurts", func() {
+var _ = Describe("My AST Hurts - Parse simples files with tags and func from struct", func() {
 
-	Context("should parse struct", func() {
+	When("parsing struct", func() {
 
-		It("should parse struct", func() {
+		It("should check two struct in file", func() {
 			env, exrr := myasthurts.NewEnvironment()
 			Expect(exrr).To(BeNil())
 
@@ -25,7 +25,7 @@ var _ = Describe("My AST Hurts", func() {
 
 		})
 
-		It("should parse struct fields", func() {
+		It("should check struct fields", func() {
 			env, exrr := myasthurts.NewEnvironment()
 			Expect(exrr).To(BeNil())
 
@@ -72,7 +72,7 @@ var _ = Describe("My AST Hurts", func() {
 
 		})
 
-		It("should parse struct tags", func() {
+		It("should check struct tags", func() {
 			env, exrr := myasthurts.NewEnvironment()
 			Expect(exrr).To(BeNil())
 
@@ -113,7 +113,7 @@ var _ = Describe("My AST Hurts", func() {
 
 		})
 
-		It("should parse struct custom field", func() {
+		It("should check struct custom field with user", func() {
 			env, exrr := myasthurts.NewEnvironment()
 			Expect(exrr).To(BeNil())
 
@@ -132,7 +132,7 @@ var _ = Describe("My AST Hurts", func() {
 
 		})
 
-		It("should parse struct comments", func() {
+		It("should check struct comments", func() {
 			env, exrr := myasthurts.NewEnvironment()
 			Expect(exrr).To(BeNil())
 
@@ -156,9 +156,9 @@ var _ = Describe("My AST Hurts", func() {
 
 	})
 
-	Context("should parse function", func() {
+	When("parsing function", func() {
 
-		It("should parse function", func() {
+		It("should check name and parameters from function", func() {
 
 			env, exrr := myasthurts.NewEnvironment()
 			Expect(exrr).To(BeNil())
@@ -194,7 +194,7 @@ var _ = Describe("My AST Hurts", func() {
 
 		})
 
-		It("should parse function in Struct", func() {
+		It("should check if func belong to struct", func() {
 			env, exrr := myasthurts.NewEnvironment()
 			Expect(exrr).To(BeNil())
 
@@ -219,9 +219,9 @@ var _ = Describe("My AST Hurts", func() {
 		})
 	})
 
-	Context("should parse imports", func() {
+	When("parsing imports", func() {
 
-		FIt("should parse imports", func() {
+		It("should check names all imports", func() {
 
 			env, exrr := myasthurts.NewEnvironment()
 			Expect(exrr).To(BeNil())
@@ -232,43 +232,48 @@ var _ = Describe("My AST Hurts", func() {
 			models, _ := env.PackageByName("models")
 			fmt, _ := env.PackageByName("fmt")
 			time, _ := env.PackageByName("time")
-			os, _ := env.PackageByName("os")
 
 			Expect(models).ToNot(BeNil())
 			Expect(fmt).ToNot(BeNil())
 			Expect(time).ToNot(BeNil())
-			Expect(os).ToNot(BeNil())
 
 			Expect(models.Name).To(Equal("models"))
 			Expect(fmt.Name).To(Equal("fmt"))
 			Expect(time.Name).To(Equal("time"))
-			Expect(os).To(Equal("os"))
 
 		})
 
-		It("should parse imports with dots", func() {
+		It("should check the struct types of import package bytes with dot", func() {
 			env, exrr := myasthurts.NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models11.sample", true)
+			exrr = env.ParsePackage("data/models12.sample", true)
 			Expect(exrr).To(BeNil())
 
-			_, ok := env.PackageByName("models")
+			models, ok := env.PackageByName("models")
 			Expect(ok).To(BeTrue())
 
-			fmtPkg, ok := env.PackageByName("fmt")
+			bytes, ok := env.PackageByName("bytes")
 			Expect(ok).To(BeTrue())
-			Expect(fmtPkg.RefType).To(HaveLen(21))
 
-			// TODO(Jeconias): parse imports with dots
-			// OBS: Test not finalized
+			Expect(models.Methods).To(HaveLen(2))
+			Expect(models.Methods[0].Name()).To(Equal("welcome"))
+			Expect(models.Methods[0].Arguments).To(HaveLen(1))
+			Expect(models.Methods[0].Arguments[0].Name).To(Equal("buf"))
+
+			ref, _ := bytes.RefTypeByName("Buffer")
+			Expect(ref).ToNot(BeNil())
+			Expect(models.Methods[0].Arguments[0].Type.Name).To(Equal(ref.Type.Name()))
+
+			stct := bytes.StructByName("Buffer")
+			Expect(stct).ToNot(BeNil())
+			Expect(models.Methods[0].Arguments[0].Type.Type).To(Equal(stct))
 		})
-
 	})
 
-	Context("should parse comments", func() {
+	When("parsing comments", func() {
 
-		It("should parse multilines or no in struct comments", func() {
+		It("should check multilines or no in struct comments", func() {
 
 			env, exrr := myasthurts.NewEnvironment()
 			Expect(exrr).To(BeNil())
@@ -298,7 +303,7 @@ var _ = Describe("My AST Hurts", func() {
 
 		})
 
-		It("should parse comments in func", func() {
+		It("should check comments in func", func() {
 
 			env, exrr := myasthurts.NewEnvironment()
 			Expect(exrr).To(BeNil())
@@ -322,39 +327,32 @@ var _ = Describe("My AST Hurts", func() {
 
 	})
 
-	Context("should parse builtin file and check types with another files", func() {
-		It("should Parse builtin file", func() {
+	When("parsing builtin file", func() {
+
+		It("should check string type from builtin file", func() {
 
 			env, exrr := myasthurts.NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			b, ok := env.PackageByName("builtin")
-			Expect(ok).To(BeTrue())
-			Expect(b.RefType).To(HaveLen(27))
+			exrr = env.ParsePackage("data/models13.sample", true)
+			Expect(exrr).To(BeNil())
 
-			Expect(b.RefType[0].Name).To(Equal("bool"))
-			Expect(b.RefType[1].Name).To(Equal("uint8"))
-			Expect(b.RefType[2].Name).To(Equal("uint16"))
-			Expect(b.RefType[3].Name).To(Equal("uint32"))
-			Expect(b.RefType[4].Name).To(Equal("uint64"))
-			Expect(b.RefType[5].Name).To(Equal("int8"))
-			Expect(b.RefType[6].Name).To(Equal("int16"))
-			Expect(b.RefType[7].Name).To(Equal("int32"))
-			Expect(b.RefType[8].Name).To(Equal("int64"))
-			Expect(b.RefType[9].Name).To(Equal("float32"))
-			Expect(b.RefType[10].Name).To(Equal("float64"))
-			Expect(b.RefType[11].Name).To(Equal("complex64"))
-			Expect(b.RefType[12].Name).To(Equal("complex128"))
-			Expect(b.RefType[13].Name).To(Equal("string"))
-			Expect(b.RefType[14].Name).To(Equal("int"))
-			Expect(b.RefType[15].Name).To(Equal("uint"))
-			Expect(b.RefType[16].Name).To(Equal("uintptr"))
-			Expect(b.RefType[17].Name).ToNot(Equal("byte")) // byte is an alias for uint8 and is equivalent to uint8 in all ways | byte = uint8
+			pkgM, okM := env.PackageByName("models")
+			pkgB, okB := env.PackageByName("builtin")
+			Expect(okM).To(BeTrue())
+			Expect(okB).To(BeTrue())
 
-			//TODO(Jeconias): Check all types
+			str, _ := pkgB.RefTypeByName("string")
+			Expect(str).ToNot(BeNil())
+
+			Expect(pkgM.Structs).To(HaveLen(1))
+			Expect(pkgM.Structs[0].Fields).To(HaveLen(4))
+			Expect(pkgM.Structs[0].Fields[0].Type.Name).To(Equal(str.Name))
+			Expect(pkgM.Structs[0].Fields[0].Type).To(Equal(str))
+
 		})
 
-		It("should parse struct with builtin file", func() {
+		It("should check struct with builtin file", func() {
 
 			env, exrr := myasthurts.NewEnvironment()
 
