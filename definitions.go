@@ -15,6 +15,25 @@ type parseContext struct {
 	PackagesMap map[string]*Package
 }
 
+func (ctx *parseContext) GetRefType(name string) (ref *RefType, exrr error) {
+
+	builtin, ok := ctx.Env.PackageByName("builtin")
+	if !ok {
+		return nil, errors.New("Pacakge builtin not found")
+	}
+
+	if ref, exrr = builtin.RefTypeByName(name); exrr == nil {
+		return ref, nil
+	}
+
+	for _, p := range ctx.PackagesMap {
+		if ref, exrr = p.RefTypeByName(name); exrr == nil {
+			return ref, nil
+		}
+	}
+	return nil, errors.New("RefType not found")
+}
+
 type Type interface {
 	Package() *Package
 	Name() string
@@ -122,6 +141,7 @@ func NewRefType(pkg *Package) *RefType {
 }
 
 func (rt *RefType) AppendType(tp Type) {
+
 	if rt.Type == nil {
 		switch t := tp.(type) {
 		case *Struct:
@@ -228,22 +248,22 @@ func (p *Package) StructByName(name string) *Struct {
 	return nil
 }
 
-func (p *Package) RefTypeByName(name string) (*RefType, bool) {
-	for _, pr := range p.RefType {
-		if name == pr.Name {
-			return pr, true
+func (p *Package) RefTypeByName(name string) (ref *RefType, exrr error) {
+	for _, pp := range p.RefType {
+		if name == pp.Name {
+			return pp, nil
 		}
 	}
-	return nil, false
+	return nil, errors.New("RefType not found")
 }
 
-func (p *Package) AppendRefType(name string) *RefType {
-	ref := &RefType{
+func (p *Package) AppendRefType(name string) (ref *RefType, exrr error) {
+	ref = &RefType{
 		Pkg:  p,
 		Name: name,
 	}
 	p.RefType = append(p.RefType, ref)
-	return ref
+	return ref, nil
 }
 
 type environment struct {

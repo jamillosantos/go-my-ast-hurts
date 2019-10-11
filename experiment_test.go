@@ -156,6 +156,21 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 	})
 
+	When("parsing variables", func() {
+
+		PIt("should check variables names", func() {
+
+			env, exrr := myasthurts.NewEnvironment()
+			Expect(exrr).To(BeNil())
+
+			exrr = env.ParsePackage("data/models11.sample", true)
+			Expect(exrr).To(BeNil())
+
+			// TODO(Jeconias):
+		})
+
+	})
+
 	When("parsing function", func() {
 
 		It("should check name and parameters from function", func() {
@@ -329,7 +344,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 	When("parsing builtin file", func() {
 
-		It("should check string type from builtin file", func() {
+		It("should check types from builtin file", func() {
 
 			env, exrr := myasthurts.NewEnvironment()
 			Expect(exrr).To(BeNil())
@@ -342,42 +357,66 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(okM).To(BeTrue())
 			Expect(okB).To(BeTrue())
 
-			str, _ := pkgB.RefTypeByName("string")
-			Expect(str).ToNot(BeNil())
+			T1, _ := pkgB.RefTypeByName("string")
+			Expect(T1).ToNot(BeNil())
+
+			T2, _ := pkgB.RefTypeByName("int")
+			Expect(T2).ToNot(BeNil())
+
+			T3, _ := pkgB.RefTypeByName("int8")
+			Expect(T3).ToNot(BeNil())
+
+			T4, _ := pkgB.RefTypeByName("int16")
+			Expect(T4).ToNot(BeNil())
+
+			T5, _ := pkgB.RefTypeByName("int32")
+			Expect(T5).ToNot(BeNil())
+
+			T6, _ := pkgB.RefTypeByName("int64")
+			Expect(T6).ToNot(BeNil())
+
+			T7, _ := pkgB.RefTypeByName("float32")
+			Expect(T7).ToNot(BeNil())
+
+			T8, _ := pkgB.RefTypeByName("float64")
+			Expect(T8).ToNot(BeNil())
+
+			T9, _ := pkgB.RefTypeByName("byte")
+			Expect(T9).ToNot(BeNil())
 
 			Expect(pkgM.Structs).To(HaveLen(1))
-			Expect(pkgM.Structs[0].Fields).To(HaveLen(4))
-			Expect(pkgM.Structs[0].Fields[0].Type.Name).To(Equal(str.Name))
-			Expect(pkgM.Structs[0].Fields[0].Type).To(Equal(str))
+			Expect(pkgM.Structs[0].Fields).To(HaveLen(9))
+
+			Expect(pkgM.Structs[0].Fields[0].Type).To(Equal(T1))
+			Expect(pkgM.Structs[0].Fields[1].Type).To(Equal(T2))
+			Expect(pkgM.Structs[0].Fields[2].Type).To(Equal(T3))
+			Expect(pkgM.Structs[0].Fields[3].Type).To(Equal(T4))
+			Expect(pkgM.Structs[0].Fields[4].Type).To(Equal(T5))
+			Expect(pkgM.Structs[0].Fields[5].Type).To(Equal(T6))
+			Expect(pkgM.Structs[0].Fields[6].Type).To(Equal(T7))
+			Expect(pkgM.Structs[0].Fields[7].Type).To(Equal(T8))
+			Expect(pkgM.Structs[0].Fields[8].Type).To(Equal(T9))
 
 		})
 
-		It("should check struct with builtin file", func() {
+		It("should check builtin file", func() {
 
 			env, exrr := myasthurts.NewEnvironment()
-
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models11.sample", true)
+			pkg, ok := env.PackageByName("builtin")
+			Expect(ok).To(BeTrue())
+
+			_, exrr = pkg.RefTypeByName("string")
 			Expect(exrr).To(BeNil())
 
-			//env.ParsePackage(f)
+			_, exrr = pkg.RefTypeByName("int64")
+			Expect(exrr).To(BeNil())
 
-			pkgM, okM := env.PackageByName("models")
-			pkgB, okB := env.PackageByName("builtin")
-			Expect(okM).To(BeTrue())
-			Expect(okB).To(BeTrue())
+			_, exrr = pkg.RefTypeByName("float32")
+			Expect(exrr).To(BeNil())
 
-			Expect(pkgM.Methods).To(HaveLen(3))
-			Expect(pkgM.Methods[1].Arguments).To(HaveLen(2))
-
-			stringType, ok := pkgB.RefTypeByName("string")
-			Expect(ok).To(BeTrue())
-			Expect(pkgM.Methods[1].Arguments[0].Type).To(Equal(stringType))
-
-			stringType, ok = pkgB.RefTypeByName("int64")
-			Expect(ok).To(BeTrue())
-			Expect(pkgM.Methods[1].Arguments[1].Type).To(Equal(stringType))
+			// ### WORK IN PROGRESS ###
 
 		})
 
