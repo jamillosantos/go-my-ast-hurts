@@ -144,13 +144,13 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(pkg).NotTo(BeNil())
 
 			Expect(pkg.Structs).To(HaveLen(1))
-			Expect(pkg.Structs[0].Comment).To(HaveLen(1))
+			Expect(pkg.Structs[0].Doc.Comments).To(HaveLen(1))
 			Expect(pkg.Structs[0].Fields).To(HaveLen(4))
 
-			Expect(pkg.Structs[0].Fields[0].Comment).To(HaveLen(1))
-			Expect(pkg.Structs[0].Fields[1].Comment).To(HaveLen(1))
-			Expect(pkg.Structs[0].Fields[2].Comment).To(HaveLen(2))
-			Expect(pkg.Structs[0].Fields[3].Comment).To(BeEmpty())
+			Expect(pkg.Structs[0].Fields[0].Doc.Comments).To(HaveLen(1))
+			Expect(pkg.Structs[0].Fields[1].Doc.Comments).To(HaveLen(1))
+			Expect(pkg.Structs[0].Fields[2].Doc.Comments).To(HaveLen(2))
+			Expect(pkg.Structs[0].Fields[3].Doc.Comments).To(BeEmpty())
 
 		})
 
@@ -299,22 +299,45 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			pkg, ok := env.PackageByName("models")
 			Expect(ok).To(BeTrue())
 
-			Expect(pkg.Comment).To(HaveLen(8))
-			Expect(pkg.Comment[0]).To(Equal("// Package models is a test"))
+			Expect(pkg.Doc.Comments).To(HaveLen(6))
+			Expect(pkg.Doc.Comments[0]).To(Equal("// Package models is a test"))
 
 			Expect(pkg.Structs).To(HaveLen(2))
-			Expect(pkg.Structs[0].Comment).To(HaveLen(1))
-			Expect(pkg.Structs[0].Comment[0]).To(Equal("/* Testing comment\nnew line\n*/"))
+			Expect(pkg.Structs[0].Doc.Comments).To(HaveLen(1))
+			Expect(pkg.Structs[0].Doc.Comments[0]).To(Equal("/* Testing comment\nnew line\n*/"))
 			Expect(pkg.Structs[0].Fields).To(HaveLen(2))
-			Expect(pkg.Structs[0].Fields[0].Comment).To(HaveLen(1))
-			Expect(pkg.Structs[0].Fields[0].Comment[0]).To(Equal("// ID comment"))
-			Expect(pkg.Structs[0].Fields[1].Comment).To(HaveLen(1))
-			Expect(pkg.Structs[0].Fields[1].Comment[0]).To(Equal("/* Comment with multilines\n\t\tTesting\n\t*/"))
+			Expect(pkg.Structs[0].Fields[0].Doc.Comments).To(HaveLen(1))
+			Expect(pkg.Structs[0].Fields[0].Doc.Comments[0]).To(Equal("// ID comment"))
+			Expect(pkg.Structs[0].Fields[1].Doc.Comments).To(HaveLen(1))
+			Expect(pkg.Structs[0].Fields[1].Doc.Comments[0]).To(Equal("/* Comment with multilines\n\tTesting\n\t*/"))
 
 			Expect(pkg.Structs[1].Fields).To(HaveLen(3))
-			Expect(pkg.Structs[1].Fields[1].Comment).To(HaveLen(2))
-			Expect(pkg.Structs[1].Fields[1].Comment[0]).To(Equal("// Line 1"))
-			Expect(pkg.Structs[1].Fields[1].Comment[1]).To(Equal("// Line 2"))
+			Expect(pkg.Structs[1].Fields[1].Doc.Comments).To(HaveLen(2))
+			Expect(pkg.Structs[1].Fields[1].Doc.Comments[0]).To(Equal("// Line 1"))
+			Expect(pkg.Structs[1].Fields[1].Doc.Comments[1]).To(Equal("// Line 2"))
+
+		})
+
+		It("should remove /*, */ or // from comment", func() {
+
+			env, exrr := myasthurts.NewEnvironment()
+			Expect(exrr).To(BeNil())
+
+			exrr = env.ParsePackage("data/models14.sample", true)
+			Expect(exrr).To(BeNil())
+
+			pkg, ok := env.PackageByName("models")
+			Expect(ok).To(BeTrue())
+
+			Expect(pkg.Doc.Comments).To(HaveLen(6))
+
+			Expect(pkg.Structs).To(HaveLen(2))
+			Expect(pkg.Structs[0].Doc.Comments).To(HaveLen(1))
+			Expect(pkg.Structs[0].Doc.FormatComment()).To(Equal("Testing comment\nnew line"))
+
+			Expect(pkg.Structs[1].Fields).To(HaveLen(3))
+			Expect(pkg.Structs[1].Fields[1].Doc.Comments).To(HaveLen(2))
+			Expect(pkg.Structs[1].Fields[1].Doc.FormatComment()).To(Equal("Line 1\nLine 2\n"))
 
 		})
 
@@ -329,14 +352,14 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			pkg, ok := env.PackageByName("models")
 			Expect(ok).To(BeTrue())
 
-			Expect(pkg.Comment).To(HaveLen(7))
-			Expect(pkg.Comment[0]).To(Equal("// Package models is a test"))
+			Expect(pkg.Doc.Comments).To(HaveLen(7))
+			Expect(pkg.Doc.Comments[0]).To(Equal("// Package models is a test"))
 
 			Expect(pkg.Methods).To(HaveLen(3))
-			Expect(pkg.Methods[0].Comment).To(HaveLen(1))
-			Expect(pkg.Methods[0].Comment[0]).To(Equal("// Comment here"))
-			Expect(pkg.Methods[1].Comment).To(HaveLen(1))
-			Expect(pkg.Methods[1].Comment[0]).To(Equal("/** Description \n    multilines\n*/"))
+			Expect(pkg.Methods[0].Doc.Comments).To(HaveLen(1))
+			Expect(pkg.Methods[0].Doc.Comments[0]).To(Equal("// Comment here"))
+			Expect(pkg.Methods[1].Doc.Comments).To(HaveLen(1))
+			Expect(pkg.Methods[1].Doc.Comments[0]).To(Equal("/** Description \n    multilines\n*/"))
 
 		})
 
@@ -417,7 +440,6 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(exrr).To(BeNil())
 
 			// ### WORK IN PROGRESS ###
-
 		})
 
 	})

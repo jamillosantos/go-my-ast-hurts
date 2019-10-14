@@ -10,6 +10,30 @@ import (
 	"github.com/fatih/structtag"
 )
 
+func (ctx *parseContext) PackageByName(name string) (*Package, bool) {
+	pkg, ok := ctx.PackagesMap[name]
+	return pkg, ok
+}
+
+func (ctx *parseContext) GetRefType(name string) (ref *RefType, exrr error) {
+
+	builtin, ok := ctx.Env.PackageByName("builtin")
+	if !ok {
+		return nil, errors.New("Pacakge builtin not found")
+	}
+
+	if ref, exrr = builtin.RefTypeByName(name); exrr == nil {
+		return ref, nil
+	}
+
+	for _, p := range ctx.PackagesMap {
+		if ref, exrr = p.RefTypeByName(name); exrr == nil {
+			return ref, nil
+		}
+	}
+	return nil, errors.New("RefType not found")
+}
+
 func (env *environment) makeEnv() (exrr error) {
 	path := ""
 	if path, exrr = env.basePath(); exrr != nil {
@@ -18,11 +42,6 @@ func (env *environment) makeEnv() (exrr error) {
 	builtinPath := fmt.Sprintf("%s/builtin", path)
 	env.ParsePackage(builtinPath, false)
 	return
-}
-
-func (p *parseContext) PackageByName(name string) (*Package, bool) {
-	pkg, ok := p.PackagesMap[name]
-	return pkg, ok
 }
 
 func (env *environment) parse(fileLocation string) (exrr error) {
@@ -43,6 +62,10 @@ func (env *environment) parse(fileLocation string) (exrr error) {
 		PackagesMap: make(map[string]*Package),
 	}
 
+	/*if ctx.File.Name.Name == "models" {
+		ast.Print(fset, file)
+	}*/
+
 	parseFileName(ctx)
 
 	decls := file.Decls
@@ -62,20 +85,22 @@ func parseFileName(ctx *parseContext) (exrr error) {
 	pkge, ok := ctx.Env.PackageByName(ctx.File.Name.Name)
 	if !ok {
 		var (
-			rComments []string
-			comments  []string
+			comments []string
 		)
 		if ctx.File.Doc != nil {
 			for _, t := range ctx.File.Comments {
-				if rComments, exrr = parseComments(t); exrr != nil {
-					return exrr
+				if rComments, exrr := parseComments(t); exrr == nil {
+					comments = append(comments, rComments...)
+					continue
 				}
-				comments = append(comments, rComments...)
+				return exrr
 			}
 		}
 		pkg := &Package{
-			Name:    ctx.File.Name.Name,
-			Comment: comments,
+			Name: ctx.File.Name.Name,
+			Doc: Doc{
+				Comments: comments,
+			},
 		}
 		ctx.Env.AppendPackage(pkg)
 		ctx.PackagesMap[ctx.File.Name.Name] = pkg
@@ -124,7 +149,9 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) (exrr error)
 		switch t := s.Type.(type) {
 		case *ast.StructType:
 			declStruct := NewStruct(currentPackage, s.Name.Name)
-			declStruct.Comment = comments
+			declStruct.Doc = Doc{
+				Comments: comments,
+			}
 
 			if refType, exrr = ctx.GetRefType(s.Name.Name); exrr != nil {
 				if refType, exrr = currentPackage.AppendRefType(s.Name.Name); exrr != nil {
@@ -246,7 +273,9 @@ func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struc
 			if comments, exrr = parseComments(field.Doc); exrr != nil {
 				return exrr
 			}
-			f.Comment = comments
+			f.Doc = Doc{
+				Comments: comments,
+			}
 		}
 
 		if len(field.Names) > 0 { // TODO(Jack): To check/understand multiple names.
@@ -312,7 +341,9 @@ func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) (exrr error) {
 		if comments, exrr = parseComments(f.Doc); exrr != nil {
 			return exrr
 		}
-		method.Comment = comments
+		method.Doc = Doc{
+			Comments: comments,
+		}
 	}
 
 	for _, field := range f.Type.Params.List {
