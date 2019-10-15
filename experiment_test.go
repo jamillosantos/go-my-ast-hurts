@@ -1,7 +1,7 @@
-package myasthurts_test
+package myasthurts
 
 import (
-	myasthurts "github.com/jamillosantos/go-my-ast-hurts"
+	//myasthurts "github.com/lab259/go-my-ast-hurts"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -11,7 +11,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 	When("parsing struct", func() {
 
 		It("should check two struct in file", func() {
-			env, exrr := myasthurts.NewEnvironment()
+			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
 			exrr = env.ParsePackage("data/models1.sample", true)
@@ -22,11 +22,10 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 			Expect(pkg).NotTo(BeNil())
 			Expect(pkg.Structs).To(HaveLen(2))
-
 		})
 
 		It("should check struct fields", func() {
-			env, exrr := myasthurts.NewEnvironment()
+			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
 			exrr = env.ParsePackage("data/models2.sample", true)
@@ -43,37 +42,36 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(pkg.Structs[0].Fields[0].Name).To(Equal("ID"))
 			Expect(pkg.Structs[0].Fields[1].Name).To(Equal("Name"))
 
-			Expect(pkg.Structs[0].Fields[0].Type).ToNot(Equal(BeNil()))
-			Expect(pkg.Structs[0].Fields[1].Type).ToNot(Equal(BeNil()))
+			Expect(pkg.Structs[0].Fields[0].RefType).ToNot(Equal(BeNil()))
+			Expect(pkg.Structs[0].Fields[1].RefType).ToNot(Equal(BeNil()))
 
-			Expect(pkg.Structs[0].Fields[0].Type.Name).To(Equal("int64"))
-			Expect(pkg.Structs[0].Fields[1].Type.Name).To(Equal("string"))
+			Expect(pkg.Structs[0].Fields[0].RefType.Name).To(Equal("int64"))
+			Expect(pkg.Structs[0].Fields[1].RefType.Name).To(Equal("string"))
 
-			Expect(pkg.Structs[0].Fields[0].Type.Type).To(BeNil())
-			Expect(pkg.Structs[0].Fields[1].Type.Type).To(BeNil())
+			Expect(pkg.Structs[0].Fields[0].RefType.Type).To(BeNil())
+			Expect(pkg.Structs[0].Fields[1].RefType.Type).To(BeNil())
 
 			Expect(pkg.Structs[1].Fields[0].Name).To(Equal("ID"))
 			Expect(pkg.Structs[1].Fields[1].Name).To(Equal("Address"))
 			Expect(pkg.Structs[1].Fields[2].Name).To(Equal("User"))
 
-			Expect(pkg.Structs[1].Fields[0].Type).ToNot(Equal(BeNil()))
-			Expect(pkg.Structs[1].Fields[1].Type).ToNot(Equal(BeNil()))
-			Expect(pkg.Structs[1].Fields[2].Type).ToNot(Equal(BeNil()))
+			Expect(pkg.Structs[1].Fields[0].RefType).ToNot(BeNil())
+			Expect(pkg.Structs[1].Fields[1].RefType).ToNot(BeNil())
+			Expect(pkg.Structs[1].Fields[2].RefType).ToNot(BeNil())
 
-			Expect(pkg.Structs[1].Fields[0].Type.Name).To(Equal("int64"))
-			Expect(pkg.Structs[1].Fields[1].Type.Name).To(Equal("string"))
-			Expect(pkg.Structs[1].Fields[2].Type.Name).To(Equal("User"))
-			Expect(pkg.Structs[1].Fields[3].Type.Name).To(Equal("User"))
+			Expect(pkg.Structs[1].Fields[0].RefType.Name).To(Equal("int64"))
+			Expect(pkg.Structs[1].Fields[1].RefType.Name).To(Equal("string"))
+			Expect(pkg.Structs[1].Fields[2].RefType.Name).To(Equal("User"))
+			Expect(pkg.Structs[1].Fields[3].RefType.Name).To(Equal("User"))
 
-			Expect(pkg.Structs[1].Fields[0].Type.Type).To(BeNil())
-			Expect(pkg.Structs[1].Fields[1].Type.Type).To(BeNil())
-			Expect(pkg.Structs[1].Fields[2].Type.Type).To(Equal(pkg.Structs[0]))
-			Expect(pkg.Structs[1].Fields[3].Type.Type).To(Equal(pkg.Structs[0]))
-
+			Expect(pkg.Structs[1].Fields[0].RefType.Type).To(BeNil())
+			Expect(pkg.Structs[1].Fields[1].RefType.Type).To(BeNil())
+			Expect(pkg.Structs[1].Fields[2].RefType.Type).To(Equal(pkg.Structs[0]))
+			Expect(pkg.Structs[1].Fields[3].RefType.Type).To(Equal(pkg.Structs[0]))
 		})
 
 		It("should check struct tags", func() {
-			env, exrr := myasthurts.NewEnvironment()
+			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
 			exrr = env.ParsePackage("data/models3.sample", true)
@@ -88,20 +86,20 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(pkg.Structs[0].Fields).To(HaveLen(3))
 
 			Expect(pkg.Structs[0].Fields[0].Tag).NotTo(BeNil())
-			Expect(pkg.Structs[0].Fields[0].Tag.Raw).To(Equal("json:\"id\""))
+			Expect(pkg.Structs[0].Fields[0].Tag.Raw).To(Equal(`json:"id"`))
 			Expect(pkg.Structs[0].Fields[0].Tag.Params).To(HaveLen(1))
 			Expect(pkg.Structs[0].Fields[0].Tag.Params[0].Name).To(Equal("json"))
 			Expect(pkg.Structs[0].Fields[0].Tag.Params[0].Value).To(Equal("id"))
 			Expect(pkg.Structs[0].Fields[0].Tag.Params[0].Options).To(BeEmpty())
 
-			Expect(pkg.Structs[0].Fields[1].Tag.Raw).To(Equal("json:\"name,lastName\""))
+			Expect(pkg.Structs[0].Fields[1].Tag.Raw).To(Equal(`json:"name,lastName"`))
 			Expect(pkg.Structs[0].Fields[1].Tag.Params).To(HaveLen(1))
 			Expect(pkg.Structs[0].Fields[1].Tag.Params[0].Name).To(Equal("json"))
 			Expect(pkg.Structs[0].Fields[1].Tag.Params[0].Value).To(Equal("name"))
 			Expect(pkg.Structs[0].Fields[1].Tag.Params[0].Options).To(HaveLen(1))
 			Expect(pkg.Structs[0].Fields[1].Tag.Params[0].Options[0]).To(Equal("lastName"))
 
-			Expect(pkg.Structs[0].Fields[2].Tag.Raw).To(Equal("json:\"address\" bson:\"\""))
+			Expect(pkg.Structs[0].Fields[2].Tag.Raw).To(Equal(`json:"address" bson:""`))
 			Expect(pkg.Structs[0].Fields[2].Tag.Params).To(HaveLen(2))
 			Expect(pkg.Structs[0].Fields[2].Tag.Params[0].Name).To(Equal("json"))
 			Expect(pkg.Structs[0].Fields[2].Tag.Params[0].Value).To(Equal("address"))
@@ -110,11 +108,10 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(pkg.Structs[0].Fields[2].Tag.Params[1].Name).To(Equal("bson"))
 			Expect(pkg.Structs[0].Fields[2].Tag.Params[1].Value).To(BeEmpty())
 			Expect(pkg.Structs[0].Fields[2].Tag.Params[1].Options).To(BeEmpty())
-
 		})
 
 		It("should check struct custom field with user", func() {
-			env, exrr := myasthurts.NewEnvironment()
+			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
 			exrr = env.ParsePackage("data/models4.sample", true)
@@ -126,14 +123,14 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 			Expect(pkg.Structs).To(HaveLen(2))
 			Expect(pkg.Structs[0].Fields).To(HaveLen(2))
-			Expect(pkg.Structs[0].Fields[1].Type.Name).To(Equal("User"))
-			Expect(pkg.Structs[0].Fields[1].Type.Type).To(Equal(pkg.Structs[1]))
-			Expect(pkg.Structs[0].Fields[1].Type.Pkg).To(Equal(pkg))
+			Expect(pkg.Structs[0].Fields[1].RefType.Name).To(Equal("User"))
+			Expect(pkg.Structs[0].Fields[1].RefType.Type).To(Equal(pkg.Structs[1]))
+			Expect(pkg.Structs[0].Fields[1].RefType.Pkg).To(Equal(pkg))
 
 		})
 
 		It("should check struct comments", func() {
-			env, exrr := myasthurts.NewEnvironment()
+			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
 			exrr = env.ParsePackage("data/models5.sample", true)
@@ -160,7 +157,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 		PIt("should check variables names", func() {
 
-			env, exrr := myasthurts.NewEnvironment()
+			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
 			exrr = env.ParsePackage("data/models11.sample", true)
@@ -175,7 +172,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 		It("should check name and parameters from function", func() {
 
-			env, exrr := myasthurts.NewEnvironment()
+			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
 			exrr = env.ParsePackage("data/models6.sample", true)
@@ -210,7 +207,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 		})
 
 		It("should check if func belong to struct", func() {
-			env, exrr := myasthurts.NewEnvironment()
+			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
 			exrr = env.ParsePackage("data/models7.sample", true)
@@ -224,7 +221,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(pkg.Structs).To(HaveLen(1))
 			Expect(pkg.Structs[0].Methods).To(HaveLen(1))
 			Expect(pkg.Structs[0].Methods[0].Descriptor.Name()).To(Equal("getName"))
-			Expect(pkg.Structs[0].Methods[0].Descriptor.Arguments).To(HaveLen(0))
+			Expect(pkg.Structs[0].Methods[0].Descriptor.Arguments).To(BeEmpty())
 			Expect(pkg.Structs[0].Methods[0].Descriptor.Recv).To(HaveLen(1))
 			Expect(pkg.Structs[0].Methods[0].Descriptor.Recv[0].Type.Type).To(Equal(pkg.Structs[0]))
 
@@ -238,7 +235,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 		It("should check names all imports", func() {
 
-			env, exrr := myasthurts.NewEnvironment()
+			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
 			exrr = env.ParsePackage("data/models8.sample", true)
@@ -259,7 +256,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 		})
 
 		It("should check the struct types of import package bytes with dot", func() {
-			env, exrr := myasthurts.NewEnvironment()
+			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
 			exrr = env.ParsePackage("data/models12.sample", true)
@@ -276,7 +273,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(models.Methods[0].Arguments).To(HaveLen(1))
 			Expect(models.Methods[0].Arguments[0].Name).To(Equal("buf"))
 
-			ref, _ := bytes.RefTypeByName("Buffer")
+			ref := bytes.RefTypeByName("Buffer")
 			Expect(ref).ToNot(BeNil())
 			Expect(models.Methods[0].Arguments[0].Type.Name).To(Equal(ref.Type.Name()))
 
@@ -290,7 +287,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 		It("should check multilines or no in struct comments", func() {
 
-			env, exrr := myasthurts.NewEnvironment()
+			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
 			exrr = env.ParsePackage("data/models9.sample", true)
@@ -320,7 +317,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 		It("should remove /*, */ or // from comment", func() {
 
-			env, exrr := myasthurts.NewEnvironment()
+			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
 			exrr = env.ParsePackage("data/models14.sample", true)
@@ -343,7 +340,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 		It("should check comments in func", func() {
 
-			env, exrr := myasthurts.NewEnvironment()
+			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
 			exrr = env.ParsePackage("data/models10.sample", true)
@@ -369,7 +366,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 		It("should check types from builtin file", func() {
 
-			env, exrr := myasthurts.NewEnvironment()
+			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
 			exrr = env.ParsePackage("data/models13.sample", true)
@@ -380,64 +377,64 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(okM).To(BeTrue())
 			Expect(okB).To(BeTrue())
 
-			T1, _ := pkgB.RefTypeByName("string")
+			T1 := pkgB.RefTypeByName("string")
 			Expect(T1).ToNot(BeNil())
 
-			T2, _ := pkgB.RefTypeByName("int")
+			T2 := pkgB.RefTypeByName("int")
 			Expect(T2).ToNot(BeNil())
 
-			T3, _ := pkgB.RefTypeByName("int8")
+			T3 := pkgB.RefTypeByName("int8")
 			Expect(T3).ToNot(BeNil())
 
-			T4, _ := pkgB.RefTypeByName("int16")
+			T4 := pkgB.RefTypeByName("int16")
 			Expect(T4).ToNot(BeNil())
 
-			T5, _ := pkgB.RefTypeByName("int32")
+			T5 := pkgB.RefTypeByName("int32")
 			Expect(T5).ToNot(BeNil())
 
-			T6, _ := pkgB.RefTypeByName("int64")
+			T6 := pkgB.RefTypeByName("int64")
 			Expect(T6).ToNot(BeNil())
 
-			T7, _ := pkgB.RefTypeByName("float32")
+			T7 := pkgB.RefTypeByName("float32")
 			Expect(T7).ToNot(BeNil())
 
-			T8, _ := pkgB.RefTypeByName("float64")
+			T8 := pkgB.RefTypeByName("float64")
 			Expect(T8).ToNot(BeNil())
 
-			T9, _ := pkgB.RefTypeByName("byte")
+			T9 := pkgB.RefTypeByName("byte")
 			Expect(T9).ToNot(BeNil())
 
 			Expect(pkgM.Structs).To(HaveLen(1))
 			Expect(pkgM.Structs[0].Fields).To(HaveLen(9))
 
-			Expect(pkgM.Structs[0].Fields[0].Type).To(Equal(T1))
-			Expect(pkgM.Structs[0].Fields[1].Type).To(Equal(T2))
-			Expect(pkgM.Structs[0].Fields[2].Type).To(Equal(T3))
-			Expect(pkgM.Structs[0].Fields[3].Type).To(Equal(T4))
-			Expect(pkgM.Structs[0].Fields[4].Type).To(Equal(T5))
-			Expect(pkgM.Structs[0].Fields[5].Type).To(Equal(T6))
-			Expect(pkgM.Structs[0].Fields[6].Type).To(Equal(T7))
-			Expect(pkgM.Structs[0].Fields[7].Type).To(Equal(T8))
-			Expect(pkgM.Structs[0].Fields[8].Type).To(Equal(T9))
+			Expect(pkgM.Structs[0].Fields[0].RefType).To(Equal(T1))
+			Expect(pkgM.Structs[0].Fields[1].RefType).To(Equal(T2))
+			Expect(pkgM.Structs[0].Fields[2].RefType).To(Equal(T3))
+			Expect(pkgM.Structs[0].Fields[3].RefType).To(Equal(T4))
+			Expect(pkgM.Structs[0].Fields[4].RefType).To(Equal(T5))
+			Expect(pkgM.Structs[0].Fields[5].RefType).To(Equal(T6))
+			Expect(pkgM.Structs[0].Fields[6].RefType).To(Equal(T7))
+			Expect(pkgM.Structs[0].Fields[7].RefType).To(Equal(T8))
+			Expect(pkgM.Structs[0].Fields[8].RefType).To(Equal(T9))
 
 		})
 
 		It("should check builtin file", func() {
 
-			env, exrr := myasthurts.NewEnvironment()
+			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
 			pkg, ok := env.PackageByName("builtin")
 			Expect(ok).To(BeTrue())
 
-			_, exrr = pkg.RefTypeByName("string")
-			Expect(exrr).To(BeNil())
+			ref := pkg.RefTypeByName("string")
+			Expect(ref).ToNot(BeNil())
 
-			_, exrr = pkg.RefTypeByName("int64")
-			Expect(exrr).To(BeNil())
+			ref = pkg.RefTypeByName("int64")
+			Expect(ref).ToNot(BeNil())
 
-			_, exrr = pkg.RefTypeByName("float32")
-			Expect(exrr).To(BeNil())
+			ref = pkg.RefTypeByName("float32")
+			Expect(ref).ToNot(BeNil())
 
 			// ### WORK IN PROGRESS ###
 		})

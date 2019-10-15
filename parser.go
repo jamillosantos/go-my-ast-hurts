@@ -22,12 +22,12 @@ func (ctx *parseContext) GetRefType(name string) (ref *RefType, exrr error) {
 		return nil, errors.New("Pacakge builtin not found")
 	}
 
-	if ref, exrr = builtin.RefTypeByName(name); exrr == nil {
+	if ref = builtin.RefTypeByName(name); ref != nil {
 		return ref, nil
 	}
 
 	for _, p := range ctx.PackagesMap {
-		if ref, exrr = p.RefTypeByName(name); exrr == nil {
+		if ref = p.RefTypeByName(name); ref != nil {
 			return ref, nil
 		}
 	}
@@ -62,9 +62,9 @@ func (env *environment) parse(fileLocation string) (exrr error) {
 		PackagesMap: make(map[string]*Package),
 	}
 
-	/*if ctx.File.Name.Name == "models" {
+	if env.Config.DevMode && env.Config.ASTI {
 		ast.Print(fset, file)
-	}*/
+	}
 
 	parseFileName(ctx)
 
@@ -266,7 +266,7 @@ func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struc
 		}
 
 		f := &Field{}
-		f.Type = refType
+		f.RefType = refType
 		f.Tag.Raw = ""
 		if field.Doc != nil {
 			var comments []string

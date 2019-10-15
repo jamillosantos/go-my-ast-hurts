@@ -19,17 +19,24 @@ type Doc struct {
 	Comments []string
 }
 
+// EnvConfig is a Struct to set config in Environment
+type EnvConfig struct {
+	DevMode bool
+	ASTI    bool
+}
+
 type environment struct {
 	packages    []*Package
 	packagesMap map[string]*Package
+	Config      EnvConfig
 }
 
 // Field is utilized in Struct type in the present moment.
 type Field struct {
-	Name string
-	Type *RefType
-	Tag  Tag
-	Doc  Doc
+	Name    string
+	RefType *RefType
+	Tag     Tag
+	Doc     Doc
 }
 
 // File is utilized to represent each file read in Package.
@@ -135,7 +142,7 @@ type Variable struct {
 	Type *RefType
 }
 
-// FormatComment is simple method to remover // or /* */ of comment
+// FormatComment is simple method to remove // or /* */ of comment
 func (doc *Doc) FormatComment() string {
 	str := ""
 	reg := regexp.MustCompile(`(\/{2}|\/\*|\*\/)`)
@@ -262,13 +269,13 @@ func (p *Package) StructByName(name string) *Struct {
 }
 
 // RefTypeByName find RefType by name.
-func (p *Package) RefTypeByName(name string) (ref *RefType, exrr error) {
+func (p *Package) RefTypeByName(name string) (ref *RefType) {
 	for _, pp := range p.RefType {
 		if name == pp.Name {
-			return pp, nil
+			return pp
 		}
 	}
-	return nil, errors.New("RefType not found")
+	return nil
 }
 
 // AppendRefType add new RefType in Package.
@@ -339,27 +346,27 @@ func (s *Struct) FormatComments() string {
 		if c == "" {
 			brk = ""
 		}
-		str += fmt.Sprintf("%s%s%s %s %s\n", c, brk, f.Name, f.Type.Name, f.Tag.Raw)
+		str += fmt.Sprintf("%s%s%s %s %s\n", c, brk, f.Name, f.RefType.Name, f.Tag.Raw)
 	}
 	return fmt.Sprintf("%s}", str)
 }
 
 // AppendTagParam add new TagParam in Tag
 func (t *Tag) AppendTagParam(tNew *TagParam) bool {
-	_, ok := t.TagParamByName(tNew.Name)
-	if ok {
-		return !ok
+	tp := t.TagParamByName(tNew.Name)
+	if tp != nil {
+		return false
 	}
 	t.Params = append(t.Params, *tNew)
-	return ok
+	return false
 }
 
 // TagParamByName find TagParam by name.
-func (t *Tag) TagParamByName(name string) (*TagParam, bool) {
+func (t *Tag) TagParamByName(name string) *TagParam {
 	for _, tp := range t.Params {
 		if tp.Name == name {
-			return &tp, true
+			return &tp
 		}
 	}
-	return nil, false
+	return nil
 }
