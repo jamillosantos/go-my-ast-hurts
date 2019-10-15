@@ -288,6 +288,23 @@ func (p *Package) AppendRefType(name string) (ref *RefType, exrr error) {
 	return ref, nil
 }
 
+func (p *Package) VariableByName(name string) (vrle *Variable) {
+	for _, v := range p.Variables {
+		if v.Name == name {
+			return v
+		}
+	}
+	return nil
+}
+
+func (p *Package) AppendVariable(vrle *Variable) (v *Variable) {
+	if v := p.VariableByName(vrle.Name); v != nil {
+		return v
+	}
+	p.Variables = append(p.Variables, vrle)
+	return nil
+}
+
 // NewRefType return new pointer RefType
 func NewRefType(pkg *Package) *RefType {
 	return &RefType{

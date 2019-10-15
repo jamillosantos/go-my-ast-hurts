@@ -226,7 +226,8 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) (exrr error)
 			}
 		}
 	case *ast.ValueSpec:
-		//parseVariable(currentPackage, s)
+		vrle := parseVariable(currentPackage, s)
+		currentPackage.AppendVariable(vrle)
 	}
 	return
 }
@@ -378,25 +379,27 @@ func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) (exrr error) {
 	return nil
 }
 
-func parseVariable(parent *Package, f *ast.ValueSpec) {
-	variable := &Variable{}
-	varType := NewRefType(parent)
-
-	variable.Name = f.Names[0].Name
-
-	if f.Names == nil {
-		varType.Name = f.Type.(*ast.Ident).Name
-		variable.Type = varType
-	} else {
-		for _, value := range f.Values {
-			switch v := value.(type) {
-			case *ast.BasicLit:
-				//varType.Name = TODO: Set values
-				fmt.Printf("%T\n", v.Kind) //TODO: Convert token.token to string
-			case *ast.Ident:
-				//varType.Name = TODO: Set values
-				fmt.Printf("%T\n", v.Name)
-			}
-		}
+func parseVariable(parent *Package, f *ast.ValueSpec) (vrle *Variable) {
+	var (
+		refType *RefType
+	)
+	variable := &Variable{
+		Name: f.Names[0].Name,
 	}
+
+	switch t := f.Type.(type) {
+
+	case *ast.Ident:
+		if refType = parent.RefTypeByName(t.Name); refType != nil {
+			variable.Type = refType
+		}
+		parent.AppendRefType(t.Name)
+	case *ast.ArrayType:
+		n := t.Elt.(*ast.Ident).Name
+		if refType = parent.RefTypeByName(n); refType != nil {
+			variable.Type = refType
+		}
+		parent.AppendRefType(n)
+	}
+	return variable
 }

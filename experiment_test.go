@@ -155,15 +155,47 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 	When("parsing variables", func() {
 
-		PIt("should check variables names", func() {
+		It("should check variables names", func() {
 
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
+			env.Config = EnvConfig{
+				DevMode: true,
+				ASTI:    false,
+			}
 
 			exrr = env.ParsePackage("data/models11.sample", true)
+			builtin, _ := env.PackageByName("builtin")
+			Expect(builtin).ToNot(BeNil())
 			Expect(exrr).To(BeNil())
 
-			// TODO(Jeconias):
+			pkg, ok := env.PackageByName("models")
+			Expect(ok).To(BeTrue())
+
+			Expect(pkg.Variables).To(HaveLen(7))
+
+			a := pkg.VariableByName("a")
+			Expect(a).ToNot(BeNil())
+
+			b := pkg.VariableByName("b")
+			Expect(b).ToNot(BeNil())
+
+			c := pkg.VariableByName("c")
+			Expect(c).ToNot(BeNil())
+
+			d := pkg.VariableByName("d")
+			Expect(d).ToNot(BeNil())
+
+			e := pkg.VariableByName("e")
+			Expect(e).ToNot(BeNil())
+
+			f := pkg.VariableByName("f")
+			Expect(f).ToNot(BeNil())
+
+			g := pkg.VariableByName("g")
+			Expect(g).ToNot(BeNil())
+
+			// TODO(Jeconias): WIP
 		})
 
 	})
