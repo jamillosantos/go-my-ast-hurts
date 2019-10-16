@@ -10,6 +10,7 @@ var (
 	e float32
 	f boolean
 	g User
+	h []string
 )
 
 type User struct {

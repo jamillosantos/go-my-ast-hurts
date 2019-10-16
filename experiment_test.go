@@ -173,7 +173,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			pkg, ok := env.PackageByName("models")
 			Expect(ok).To(BeTrue())
 
-			Expect(pkg.Variables).To(HaveLen(7))
+			Expect(pkg.Variables).To(HaveLen(8))
 
 			a := pkg.VariableByName("a")
 			Expect(a).ToNot(BeNil())
@@ -203,6 +203,10 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(g).ToNot(BeNil())
 			Expect(g.RefType).ToNot(BeNil())
 
+			h := pkg.VariableByName("h")
+			Expect(h).ToNot(BeNil())
+			Expect(h.RefType).ToNot(BeNil())
+
 			Expect(pkg.RefTypeByName("string")).To(Equal(a.RefType))
 			Expect(pkg.RefTypeByName("byte")).To(Equal(b.RefType))
 			Expect(pkg.RefTypeByName("int")).To(Equal(c.RefType))
@@ -213,6 +217,40 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(g.RefType.Type).ToNot(BeNil())
 			Expect(g.RefType.Type.Name()).To(Equal("User"))
 
+			Expect(pkg.RefTypeByName("string")).To(Equal(h.RefType))
+
+			/* Obs: At the moment it is not possible to identify if
+			 * 		the variable is array or no. (This is necessary?)
+			 */
+		})
+
+		It("should check const", func() {
+
+			env, exrr := NewEnvironment()
+			Expect(exrr).To(BeNil())
+			env.Config = EnvConfig{
+				DevMode: true,
+				ASTI:    false,
+			}
+
+			exrr = env.ParsePackage("data/models15.sample", true)
+			builtin, _ := env.PackageByName("builtin")
+			Expect(builtin).ToNot(BeNil())
+			Expect(exrr).To(BeNil())
+
+			pkg, ok := env.PackageByName("models")
+			Expect(ok).To(BeTrue())
+
+			a := pkg.VariableByName("PI")
+			Expect(a).ToNot(BeNil())
+			Expect(a.RefType).ToNot(BeNil())
+
+			b := pkg.VariableByName("OLM")
+			Expect(b).ToNot(BeNil())
+			Expect(b.RefType).ToNot(BeNil())
+
+			Expect(pkg.RefTypeByName("float")).To(Equal(a.RefType))
+			Expect(pkg.RefTypeByName("string")).To(Equal(b.RefType))
 		})
 
 	})

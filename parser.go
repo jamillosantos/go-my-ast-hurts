@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"strings"
 
 	"github.com/fatih/structtag"
 )
@@ -390,7 +391,6 @@ func parseVariable(parent *Package, f *ast.ValueSpec) (vrle *Variable) {
 	}
 
 	switch t := f.Type.(type) {
-
 	case *ast.Ident:
 		refType = parent.RefTypeByName(t.Name)
 		if refType != nil {
@@ -403,9 +403,23 @@ func parseVariable(parent *Package, f *ast.ValueSpec) (vrle *Variable) {
 		refType = parent.RefTypeByName(n)
 		if refType != nil {
 			variable.RefType = refType
-			return
+		} else {
+			variable.RefType = parent.AppendRefType(n)
 		}
-		variable.RefType = parent.AppendRefType(n)
 	}
+
+	for _, value := range f.Values {
+		switch v := value.(type) {
+		case *ast.BasicLit:
+			typeName := strings.ToLower(v.Kind.String())
+			refType = parent.RefTypeByName(typeName)
+			if refType != nil {
+				variable.RefType = refType
+				return
+			}
+			variable.RefType = parent.AppendRefType(typeName)
+		}
+	}
+
 	return variable
 }
