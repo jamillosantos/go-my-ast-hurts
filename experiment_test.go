@@ -15,7 +15,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models1.sample", true)
+			exrr = env.ParsePackage("data/models1.sample.go", true)
 			Expect(exrr).To(BeNil())
 
 			pkg, ok := env.PackageByName("models")
@@ -29,7 +29,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models2.sample", true)
+			exrr = env.ParsePackage("data/models2.sample.go", true)
 			Expect(exrr).To(BeNil())
 
 			pkg, ok := env.PackageByName("models")
@@ -75,7 +75,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models3.sample", true)
+			exrr = env.ParsePackage("data/models3.sample.go", true)
 			Expect(exrr).To(BeNil())
 
 			pkg, ok := env.PackageByName("models")
@@ -115,7 +115,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models4.sample", true)
+			exrr = env.ParsePackage("data/models4.sample.go", true)
 			Expect(exrr).To(BeNil())
 
 			pkg, ok := env.PackageByName("models")
@@ -134,7 +134,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models5.sample", true)
+			exrr = env.ParsePackage("data/models5.sample.go", true)
 			Expect(exrr).To(BeNil())
 
 			pkg, ok := env.PackageByName("models")
@@ -165,7 +165,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 				ASTI:    false,
 			}
 
-			exrr = env.ParsePackage("data/models11.sample", true)
+			exrr = env.ParsePackage("data/models11.sample.go", true)
 			builtin, _ := env.PackageByName("builtin")
 			Expect(builtin).ToNot(BeNil())
 			Expect(exrr).To(BeNil())
@@ -233,7 +233,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 				ASTI:    false,
 			}
 
-			exrr = env.ParsePackage("data/models15.sample", true)
+			exrr = env.ParsePackage("data/models15.sample.go", true)
 			builtin, _ := env.PackageByName("builtin")
 			Expect(builtin).ToNot(BeNil())
 			Expect(exrr).To(BeNil())
@@ -262,7 +262,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models6.sample", true)
+			exrr = env.ParsePackage("data/models6.sample.go", true)
 			Expect(exrr).To(BeNil())
 
 			pkg, ok := env.PackageByName("models")
@@ -297,7 +297,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models7.sample", true)
+			exrr = env.ParsePackage("data/models7.sample.go", true)
 			Expect(exrr).To(BeNil())
 
 			pkg, ok := env.PackageByName("models")
@@ -325,7 +325,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models8.sample", true)
+			exrr = env.ParsePackage("data/models8.sample.go", true)
 			Expect(exrr).To(BeNil())
 
 			models, _ := env.PackageByName("models")
@@ -346,7 +346,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models12.sample", true)
+			exrr = env.ParsePackage("data/models12.sample.go", true)
 			Expect(exrr).To(BeNil())
 
 			models, ok := env.PackageByName("models")
@@ -377,7 +377,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models9.sample", true)
+			exrr = env.ParsePackage("data/models9.sample.go", true)
 			Expect(exrr).To(BeNil())
 
 			pkg, ok := env.PackageByName("models")
@@ -407,7 +407,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models14.sample", true)
+			exrr = env.ParsePackage("data/models14.sample.go", true)
 			Expect(exrr).To(BeNil())
 
 			pkg, ok := env.PackageByName("models")
@@ -430,7 +430,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models10.sample", true)
+			exrr = env.ParsePackage("data/models10.sample.go", true)
 			Expect(exrr).To(BeNil())
 
 			pkg, ok := env.PackageByName("models")
@@ -456,7 +456,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models13.sample", true)
+			exrr = env.ParsePackage("data/models13.sample.go", true)
 			Expect(exrr).To(BeNil())
 
 			pkgM, okM := env.PackageByName("models")
