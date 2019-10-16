@@ -7,7 +7,15 @@ var (
 	b byte
 	c int
 	d int64
-	e []string
-	f float32
-	g boolean
+	e float32
+	f boolean
+	g User
 )
+
+type User struct {
+	ID    int64  `json:"id"`
+	// Line 1
+	// Line 2
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}

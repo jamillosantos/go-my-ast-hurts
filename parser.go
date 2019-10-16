@@ -154,8 +154,8 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) (exrr error)
 			}
 
 			if refType, exrr = ctx.GetRefType(s.Name.Name); exrr != nil {
-				if refType, exrr = currentPackage.AppendRefType(s.Name.Name); exrr != nil {
-					return exrr
+				if refType = currentPackage.AppendRefType(s.Name.Name); refType == nil {
+					return errors.New("Append Reftype error")
 				}
 			}
 
@@ -203,8 +203,8 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) (exrr error)
 			}
 
 			if refType, exrr = ctx.GetRefType(s.Name.Name); exrr != nil {
-				if refType, exrr = currentPackage.AppendRefType(s.Name.Name); exrr != nil {
-					return exrr
+				if refType = currentPackage.AppendRefType(s.Name.Name); refType == nil {
+					return errors.New("Append Reftype error")
 				}
 			}
 		} else {
@@ -220,14 +220,16 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) (exrr error)
 				}
 			}
 			if refType, exrr = ctx.GetRefType(namePkg); exrr != nil {
-				if refType, exrr = currentPackage.AppendRefType(namePkg); exrr != nil {
-					return exrr
+				if refType = currentPackage.AppendRefType(namePkg); refType == nil {
+					return errors.New("Append Reftype error")
 				}
 			}
 		}
 	case *ast.ValueSpec:
-		vrle := parseVariable(currentPackage, s)
-		currentPackage.AppendVariable(vrle)
+		if currentPackage.Name != "builtin" {
+			vrle := parseVariable(currentPackage, s)
+			currentPackage.AppendVariable(vrle)
+		}
 	}
 	return
 }
@@ -245,22 +247,22 @@ func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struc
 		switch t := field.Type.(type) {
 		case *ast.Ident:
 			if refType, exrr = ctx.GetRefType(t.Name); exrr != nil {
-				if refType, exrr = currentPackage.AppendRefType(t.Name); exrr != nil {
-					return exrr
+				if refType = currentPackage.AppendRefType(t.Name); refType == nil {
+					return errors.New("Append Reftype error")
 				}
 			}
 		case *ast.SelectorExpr:
 			if refType, exrr = ctx.GetRefType(t.X.(*ast.Ident).Name); exrr != nil {
-				if refType, exrr = currentPackage.AppendRefType(t.X.(*ast.Ident).Name); exrr != nil {
-					return exrr
+				if refType = currentPackage.AppendRefType(t.X.(*ast.Ident).Name); refType == nil {
+					return errors.New("Append Reftype error")
 				}
 			}
 		case *ast.StarExpr:
 			switch xType := t.X.(type) { // TODO: Check this type
 			case *ast.Ident:
 				if refType, exrr = ctx.GetRefType(xType.Name); exrr != nil {
-					if refType, exrr = currentPackage.AppendRefType(xType.Name); exrr != nil {
-						return exrr
+					if refType = currentPackage.AppendRefType(xType.Name); refType == nil {
+						return errors.New("Append Reftype error")
 					}
 				}
 			}
@@ -329,8 +331,8 @@ func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) (exrr error) {
 
 			recv.Name = field.Names[0].Name
 			if recv.Type, exrr = ctx.GetRefType(typeName); exrr != nil {
-				if recv.Type, exrr = currentPackage.AppendRefType(typeName); exrr != nil {
-					return exrr
+				if recv.Type = currentPackage.AppendRefType(typeName); recv.Type == nil {
+					return errors.New("Append Reftype error")
 				}
 			}
 			method.Recv = append(method.Recv, recv)
@@ -356,16 +358,16 @@ func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) (exrr error) {
 		switch t := field.Type.(type) {
 		case *ast.Ident:
 			if argument.Type, exrr = ctx.GetRefType(t.Name); exrr != nil {
-				if argument.Type, exrr = currentPackage.AppendRefType(t.Name); exrr != nil {
-					return exrr
+				if argument.Type = currentPackage.AppendRefType(t.Name); argument.Type == nil {
+					return errors.New("Append Reftype error")
 				}
 			}
 		case *ast.StarExpr:
 			switch xType := t.X.(type) {
 			case *ast.Ident:
 				if argument.Type, exrr = ctx.GetRefType(xType.Name); exrr != nil {
-					if argument.Type, exrr = currentPackage.AppendRefType(xType.Name); exrr != nil {
-						return exrr
+					if argument.Type = currentPackage.AppendRefType(xType.Name); argument.Type == nil {
+						return errors.New("Append Reftype error")
 					}
 				}
 			case *ast.SelectorExpr:
@@ -390,16 +392,20 @@ func parseVariable(parent *Package, f *ast.ValueSpec) (vrle *Variable) {
 	switch t := f.Type.(type) {
 
 	case *ast.Ident:
-		if refType = parent.RefTypeByName(t.Name); refType != nil {
-			variable.Type = refType
+		refType = parent.RefTypeByName(t.Name)
+		if refType != nil {
+			variable.RefType = refType
+			return
 		}
-		parent.AppendRefType(t.Name)
+		variable.RefType = parent.AppendRefType(t.Name)
 	case *ast.ArrayType:
 		n := t.Elt.(*ast.Ident).Name
-		if refType = parent.RefTypeByName(n); refType != nil {
-			variable.Type = refType
+		refType = parent.RefTypeByName(n)
+		if refType != nil {
+			variable.RefType = refType
+			return
 		}
-		parent.AppendRefType(n)
+		variable.RefType = parent.AppendRefType(n)
 	}
 	return variable
 }

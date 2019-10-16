@@ -138,8 +138,8 @@ type Type interface {
 }
 
 type Variable struct {
-	Name string
-	Type *RefType
+	Name    string
+	RefType *RefType
 }
 
 // FormatComment is simple method to remove // or /* */ of comment
@@ -279,13 +279,13 @@ func (p *Package) RefTypeByName(name string) (ref *RefType) {
 }
 
 // AppendRefType add new RefType in Package.
-func (p *Package) AppendRefType(name string) (ref *RefType, exrr error) {
+func (p *Package) AppendRefType(name string) (ref *RefType) {
 	ref = &RefType{
 		Pkg:  p,
 		Name: name,
 	}
 	p.RefType = append(p.RefType, ref)
-	return ref, nil
+	return ref
 }
 
 func (p *Package) VariableByName(name string) (vrle *Variable) {
@@ -298,11 +298,8 @@ func (p *Package) VariableByName(name string) (vrle *Variable) {
 }
 
 func (p *Package) AppendVariable(vrle *Variable) (v *Variable) {
-	if v := p.VariableByName(vrle.Name); v != nil {
-		return v
-	}
 	p.Variables = append(p.Variables, vrle)
-	return nil
+	return vrle
 }
 
 // NewRefType return new pointer RefType

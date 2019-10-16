@@ -2,6 +2,7 @@ package myasthurts
 
 import (
 	//myasthurts "github.com/lab259/go-my-ast-hurts"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -155,7 +156,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 	When("parsing variables", func() {
 
-		It("should check variables names", func() {
+		It("should check variables declarated with var", func() {
 
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
@@ -176,26 +177,42 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 			a := pkg.VariableByName("a")
 			Expect(a).ToNot(BeNil())
+			Expect(a.RefType).ToNot(BeNil())
 
 			b := pkg.VariableByName("b")
 			Expect(b).ToNot(BeNil())
+			Expect(b.RefType).ToNot(BeNil())
 
 			c := pkg.VariableByName("c")
 			Expect(c).ToNot(BeNil())
+			Expect(c.RefType).ToNot(BeNil())
 
 			d := pkg.VariableByName("d")
 			Expect(d).ToNot(BeNil())
+			Expect(d.RefType).ToNot(BeNil())
 
 			e := pkg.VariableByName("e")
 			Expect(e).ToNot(BeNil())
+			Expect(e.RefType).ToNot(BeNil())
 
 			f := pkg.VariableByName("f")
 			Expect(f).ToNot(BeNil())
+			Expect(f.RefType).ToNot(BeNil())
 
 			g := pkg.VariableByName("g")
 			Expect(g).ToNot(BeNil())
+			Expect(g.RefType).ToNot(BeNil())
 
-			// TODO(Jeconias): WIP
+			Expect(pkg.RefTypeByName("string")).To(Equal(a.RefType))
+			Expect(pkg.RefTypeByName("byte")).To(Equal(b.RefType))
+			Expect(pkg.RefTypeByName("int")).To(Equal(c.RefType))
+			Expect(pkg.RefTypeByName("int64")).To(Equal(d.RefType))
+			Expect(pkg.RefTypeByName("float32")).To(Equal(e.RefType))
+			Expect(pkg.RefTypeByName("boolean")).To(Equal(f.RefType))
+			Expect(pkg.RefTypeByName("User")).To(Equal(g.RefType))
+			Expect(g.RefType.Type).ToNot(BeNil())
+			Expect(g.RefType.Type.Name()).To(Equal("User"))
+
 		})
 
 	})
