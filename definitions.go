@@ -8,7 +8,7 @@ type Type interface {
 type MethodDescriptor struct {
 	pkg       *Package
 	name      string
-	Comment   string
+	Comment   []string
 	Recv      []MethodArgument
 	Arguments []MethodArgument
 	Result    []MethodResult
@@ -34,7 +34,7 @@ type Interface struct {
 	pkg     *Package
 	name    string
 	Methods []MethodDescriptor
-	Comment string
+	Comment []string
 }
 
 func NewInterface(pkg *Package, name string) *Interface {
@@ -55,7 +55,7 @@ func (i *Interface) Name() string {
 type Struct struct {
 	pkg        *Package
 	name       string
-	Comment    string
+	Comment    []string
 	Fields     []*Field
 	Methods    []*StructMethod
 	Interfaces []*Interface
@@ -110,6 +110,24 @@ type Tag struct {
 	Params []TagParam
 }
 
+func (t *Tag) AppendTagParam(tNew *TagParam) bool {
+	_, ok := t.TagParamByName(tNew.Name)
+	if ok {
+		return !ok
+	}
+	t.Params = append(t.Params, *tNew)
+	return ok
+}
+
+func (t *Tag) TagParamByName(name string) (*TagParam, bool) {
+	for _, tp := range t.Params {
+		if tp.Name == name {
+			return &tp, true
+		}
+	}
+	return nil, false
+}
+
 type TagParam struct {
 	Name    string
 	Value   string
@@ -125,7 +143,7 @@ type Field struct {
 	Name    string
 	Type    *RefType
 	Tag     Tag
-	Comment string
+	Comment []string
 }
 
 type StructMethod struct {
@@ -136,7 +154,7 @@ type StructMethod struct {
 type File struct {
 	Package    *Package
 	FileName   string
-	Comment    string
+	Comment    []string
 	Variables  []*Variable
 	Constants  []*Constant
 	Structs    []*Struct
@@ -146,7 +164,7 @@ type File struct {
 
 type Package struct {
 	Name        string
-	Comment     string
+	Comment     []string
 	Directory   string
 	Variables   []*Variable
 	Constants   []*Constant
@@ -164,20 +182,13 @@ func (p *Package) AppendStruct(s *Struct) {
 	p.Structs = append(p.Structs, s)
 }
 
-func (p *Package) AppendRefType(name string) {
-	p.RefType = append(p.RefType, &RefType{
-		Name: name,
-		Pkg:  p,
-	})
-}
-
-func (p *Package) RefTypeByName(name string) *RefType {
-	for _, pt := range p.RefType {
-		if pt.Name == name {
-			return pt
+func (p *Package) RefTypeByName(name string) (*RefType, bool) {
+	for _, pr := range p.RefType {
+		if name == pr.Name {
+			return pr, true
 		}
 	}
-	return nil
+	return nil, false
 }
 
 type Environment struct {

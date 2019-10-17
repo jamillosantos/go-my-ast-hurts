@@ -1,8 +1,7 @@
-// Package models is a test
 package models
 
-/* this is a func */
-func test_1(num int, text string) {
-	fmt.Println(num)
-	fmt.Println(text)
+type User struct {
+	ID      int64  `json:"id"`
+    Name    string `json:"name,lastName"`
+	Address string `json:"address" bson:""`
 }
