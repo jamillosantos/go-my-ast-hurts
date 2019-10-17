@@ -352,7 +352,7 @@ func (s *Struct) Name() string {
 }
 
 // FormatComments show struct with all comments
-func (s *Struct) FormatComments() string {
+/*func (s *Struct) FormatComments() string {
 	str := fmt.Sprintf("%s\ntype %s struct {\n", s.Doc.FormatComment(), s.Name())
 	for _, f := range s.Fields {
 		c := f.Doc.FormatComment()
@@ -363,7 +363,7 @@ func (s *Struct) FormatComments() string {
 		str += fmt.Sprintf("%s%s%s %s %s\n", c, brk, f.Name, f.RefType.Name, f.Tag.Raw)
 	}
 	return fmt.Sprintf("%s}", str)
-}
+}*/
 
 // AppendTagParam add new TagParam in Tag
 func (t *Tag) AppendTagParam(tNew *TagParam) bool {

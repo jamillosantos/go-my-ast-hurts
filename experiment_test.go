@@ -3,15 +3,67 @@ package myasthurts
 import (
 	//myasthurts "github.com/lab259/go-my-ast-hurts"
 
+	"os"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("My AST Hurts - Parse simples files with tags and func from struct", func() {
 
+	When("parsing file", func() {
+
+		var (
+			GOROOT string
+		)
+
+		BeforeSuite(func() {
+			GOROOT = os.Getenv("GOROOT")
+		})
+
+		JustAfterEach(func() {
+			os.Setenv("GOROOT", GOROOT)
+		})
+
+		It("should show error if GOROOT not exist", func() {
+			path := os.Getenv("GOROOT")
+			Expect(path).ToNot(BeEmpty())
+
+			exrr := os.Setenv("GOROOT", "")
+			Expect(exrr).ShouldNot(HaveOccurred())
+
+			_, exrr = NewEnvironment()
+			Expect(exrr).To(HaveOccurred())
+			Expect("GOROOT environment variable not found or is empty").To(Equal(exrr.Error()))
+		})
+
+		It("should show error if GOROOT has incorrect value", func() {
+			path := os.Getenv("GOROOT")
+			Expect(path).ToNot(BeEmpty())
+
+			exrr := os.Setenv("GOROOT", "any")
+			Expect(exrr).ShouldNot(HaveOccurred())
+
+			_, exrr = NewEnvironment()
+			Expect(exrr).To(HaveOccurred())
+			Expect("open any/src/builtin: no such file or directory").To(Equal(exrr.Error()))
+		})
+
+		It("should show error if file not found", func() {
+			env, exrr := NewEnvironment()
+			Expect(exrr).To(BeNil())
+
+			exrr = env.ParsePackage("data/models259.sample.go", true)
+			Expect(exrr).Should(HaveOccurred())
+
+			Expect("File not found").To(Equal(exrr.Error()))
+		})
+
+	})
+
 	When("parsing struct", func() {
 
-		It("should check two struct in file", func() {
+		It("should check two struct in file and if anyName struct no exist", func() {
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
@@ -23,6 +75,8 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 			Expect(pkg).NotTo(BeNil())
 			Expect(pkg.Structs).To(HaveLen(2))
+
+			Expect(pkg.StructByName("anyName")).To(BeNil())
 		})
 
 		It("should check struct fields", func() {
@@ -92,6 +146,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(pkg.Structs[0].Fields[0].Tag.Params[0].Name).To(Equal("json"))
 			Expect(pkg.Structs[0].Fields[0].Tag.Params[0].Value).To(Equal("id"))
 			Expect(pkg.Structs[0].Fields[0].Tag.Params[0].Options).To(BeEmpty())
+			Expect(pkg.Structs[0].Fields[0].Tag.TagParamByName("test")).To(BeNil())
 
 			Expect(pkg.Structs[0].Fields[1].Tag.Raw).To(Equal(`json:"name,lastName"`))
 			Expect(pkg.Structs[0].Fields[1].Tag.Params).To(HaveLen(1))
@@ -105,10 +160,12 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(pkg.Structs[0].Fields[2].Tag.Params[0].Name).To(Equal("json"))
 			Expect(pkg.Structs[0].Fields[2].Tag.Params[0].Value).To(Equal("address"))
 			Expect(pkg.Structs[0].Fields[2].Tag.Params[0].Options).To(BeEmpty())
+			Expect(pkg.Structs[0].Fields[2].Tag.TagParamByName("bson")).ToNot(BeNil())
 
 			Expect(pkg.Structs[0].Fields[2].Tag.Params[1].Name).To(Equal("bson"))
 			Expect(pkg.Structs[0].Fields[2].Tag.Params[1].Value).To(BeEmpty())
 			Expect(pkg.Structs[0].Fields[2].Tag.Params[1].Options).To(BeEmpty())
+
 		})
 
 		It("should check struct custom field with user", func() {
@@ -206,6 +263,9 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			h := pkg.VariableByName("h")
 			Expect(h).ToNot(BeNil())
 			Expect(h.RefType).ToNot(BeNil())
+
+			x := pkg.VariableByName("x")
+			Expect(x).To(BeNil())
 
 			Expect(pkg.RefTypeByName("string")).To(Equal(a.RefType))
 			Expect(pkg.RefTypeByName("byte")).To(Equal(b.RefType))
@@ -314,6 +374,21 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 			Expect(pkg.Methods[0].Name()).To(Equal("getName"))
 			Expect(pkg.Methods[1].Name()).To(Equal("getName_"))
+
+		})
+
+		It("should check package of func", func() {
+			env, exrr := NewEnvironment()
+			Expect(exrr).To(BeNil())
+
+			exrr = env.ParsePackage("data/models7.sample.go", true)
+			Expect(exrr).To(BeNil())
+
+			pkg, ok := env.PackageByName("models")
+			Expect(ok).To(BeTrue())
+
+			Expect(pkg.Methods).To(HaveLen(2))
+			Expect(pkg.Methods[0].Package()).To(Equal(pkg))
 
 		})
 	})

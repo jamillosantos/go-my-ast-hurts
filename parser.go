@@ -41,7 +41,9 @@ func (env *environment) makeEnv() (exrr error) {
 		return exrr
 	}
 	builtinPath := fmt.Sprintf("%s/builtin", path)
-	env.ParsePackage(builtinPath, false)
+	if exrr = env.ParsePackage(builtinPath, false); exrr != nil {
+		return exrr
+	}
 	return
 }
 
@@ -112,10 +114,6 @@ func parseFileName(ctx *parseContext) (exrr error) {
 }
 
 func parseComments(doc *ast.CommentGroup) (r []string, exrr error) {
-	if doc.List == nil {
-		return nil, errors.New("Doc list empty")
-	}
-
 	sizeList := len(doc.List)
 
 	t := make([]string, sizeList)
@@ -291,8 +289,7 @@ func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struc
 
 			structTag, err := structtag.Parse(f.Tag.Raw)
 			if err != nil {
-				fmt.Println("Error in format StructTag.")
-				panic(err)
+				return err
 			}
 
 			for _, tag := range structTag.Tags() {
@@ -320,7 +317,7 @@ func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) (exrr error) {
 	currentPackage := ctx.PackagesMap[ctx.File.Name.Name]
 	method := NewMethodDescriptor(currentPackage, f.Name.Name)
 
-	if f.Recv != nil { //TODO(check): I don't know if this pointers always will exist if "f.Recv" is diff than nil.
+	if f.Recv != nil {
 		recvList := f.Recv.List
 		for _, field := range recvList {
 			recv := MethodArgument{}
@@ -403,8 +400,7 @@ func parseVariable(parent *Package, f *ast.ValueSpec) (vrle *Variable) {
 		refType = parent.RefTypeByName(n)
 		if refType != nil {
 			variable.RefType = refType
-		} else {
-			variable.RefType = parent.AppendRefType(n)
+			//I don't know why the "return" causes error here
 		}
 	}
 
