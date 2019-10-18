@@ -1,24 +1,60 @@
 package myasthurts
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
+	"go/parser"
+	"go/token"
 
 	"github.com/fatih/structtag"
 )
 
-type parseContext struct {
-	File        *ast.File
-	Env         *Environment
-	PackagesMap map[string]*Package
-}
-
-func (p *parseContext) PackageByName(name string) (*Package, bool) {
-	pkg, ok := p.PackagesMap[name]
+func (ctx *parseContext) PackageByName(name string) (*Package, bool) {
+	pkg, ok := ctx.PackagesMap[name]
 	return pkg, ok
 }
 
-func Parse(env *Environment, file *ast.File) {
+func (ctx *parseContext) GetRefType(name string) (ref *RefType, exrr error) {
+
+	builtin, ok := ctx.Env.PackageByName("builtin")
+	if !ok {
+		return nil, errors.New("Pacakge builtin not found")
+	}
+
+	if ref = builtin.RefTypeByName(name); ref != nil {
+		return ref, nil
+	}
+
+	for _, p := range ctx.PackagesMap {
+		if ref = p.RefTypeByName(name); ref != nil {
+			return ref, nil
+		}
+	}
+	return nil, errors.New("RefType not found")
+}
+
+func (env *environment) makeEnv() (exrr error) {
+	path := ""
+	if path, exrr = env.basePath(); exrr != nil {
+		return exrr
+	}
+	builtinPath := fmt.Sprintf("%s/builtin", path)
+	env.ParsePackage(builtinPath, false)
+	return
+}
+
+func (env *environment) parse(fileLocation string) (exrr error) {
+
+	var (
+		file *ast.File
+		fset *token.FileSet
+	)
+
+	fset = token.NewFileSet()
+	if file, exrr = parser.ParseFile(fset, fileLocation, nil, parser.ParseComments); exrr != nil {
+		return exrr
+	}
 
 	ctx := &parseContext{
 		File:        file,
@@ -26,7 +62,11 @@ func Parse(env *Environment, file *ast.File) {
 		PackagesMap: make(map[string]*Package),
 	}
 
-	parsePackage(ctx)
+	if env.Config.DevMode && env.Config.ASTI {
+		ast.Print(fset, file)
+	}
+
+	parseFileName(ctx)
 
 	decls := file.Decls
 	for _, d := range decls {
@@ -37,88 +77,136 @@ func Parse(env *Environment, file *ast.File) {
 			parseFuncDecl(ctx, c)
 		}
 	}
+	return
 }
 
-func parsePackage(ctx *parseContext) {
+func parseFileName(ctx *parseContext) (exrr error) {
 
-	_, ok := ctx.Env.PackageByName(ctx.File.Name.Name)
+	pkge, ok := ctx.Env.PackageByName(ctx.File.Name.Name)
 	if !ok {
-		var comments []string
+		var (
+			comments []string
+		)
 		if ctx.File.Doc != nil {
 			for _, t := range ctx.File.Comments {
-				parseComments(t, &comments)
+				if rComments, exrr := parseComments(t); exrr == nil {
+					comments = append(comments, rComments...)
+					continue
+				}
+				return exrr
 			}
 		}
 		pkg := &Package{
-			Name:    ctx.File.Name.Name,
-			Comment: comments,
+			Name: ctx.File.Name.Name,
+			Doc: Doc{
+				Comments: comments,
+			},
 		}
 		ctx.Env.AppendPackage(pkg)
 		ctx.PackagesMap[ctx.File.Name.Name] = pkg
+	} else {
+		ctx.PackagesMap[ctx.File.Name.Name] = pkge
 	}
+	return nil
 }
 
-func parseComments(doc *ast.CommentGroup, c *[]string) {
+func parseComments(doc *ast.CommentGroup) (r []string, exrr error) {
 	if doc.List == nil {
-		return
+		return nil, errors.New("Doc list empty")
 	}
 
 	sizeList := len(doc.List)
-	if len(*c) != 0 {
-		t := make([]string, sizeList)
-		for i := 0; i < sizeList; i++ {
-			t[i] = doc.List[i].Text
-		}
-		*c = append(*c, t...)
-		return
-	}
-	*c = make([]string, sizeList)
+
+	t := make([]string, sizeList)
 	for i := 0; i < sizeList; i++ {
-		(*c)[i] = doc.List[i].Text
+		t[i] = doc.List[i].Text
 	}
+	return t, nil
 }
 
-func parseGenDecl(ctx *parseContext, s *ast.GenDecl) {
+func parseGenDecl(ctx *parseContext, s *ast.GenDecl) (exrr error) {
 	var comments []string
+
 	if s.Doc != nil {
-		parseComments(s.Doc, &comments)
+		if comments, exrr = parseComments(s.Doc); exrr != nil {
+			return exrr
+		}
 	}
 
 	for _, spec := range s.Specs {
-		parseSpec(ctx, spec, &comments)
+		parseSpec(ctx, spec, comments)
 	}
+	return nil
 }
 
-func parseSpec(ctx *parseContext, spec ast.Spec, comments *[]string) {
+func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) (exrr error) {
 	currentPackage := ctx.PackagesMap[ctx.File.Name.Name]
+	var refType *RefType
 
 	switch s := spec.(type) {
 	case *ast.TypeSpec:
+		nameType := s.Name.Name
 		switch t := s.Type.(type) {
 		case *ast.StructType:
 			declStruct := NewStruct(currentPackage, s.Name.Name)
-			declStruct.Comment = *comments
-			refType := getRefType(ctx, s.Name.Name)
+			declStruct.Doc = Doc{
+				Comments: comments,
+			}
+
+			if refType, exrr = ctx.GetRefType(s.Name.Name); exrr != nil {
+				if refType, exrr = currentPackage.AppendRefType(s.Name.Name); exrr != nil {
+					return exrr
+				}
+			}
+
 			refType.AppendType(declStruct)
 
 			parseStruct(ctx, t, declStruct)
 			currentPackage.Types = append(currentPackage.Types, declStruct)
+		case *ast.Ident:
+			if ctx.File.Name.Name == "builtin" {
+				if nameType != t.Name {
+					currentPackage.AppendRefType(nameType)
+				} else {
+					currentPackage.AppendRefType(t.Name)
+				}
+			}
 		}
+
 	case *ast.ImportSpec:
 		namePkg := s.Path.Value[1 : len(s.Path.Value)-1]
 		if s.Name != nil {
 			_, ok := ctx.PackageByName(s.Name.Name)
 			if !ok {
-				newPkg := &Package{
-					Name: namePkg,
-				}
-				ctx.PackagesMap[s.Name.Name] = newPkg
-				_, ok := ctx.Env.PackageByName(namePkg)
-				if !ok {
+				newPkg := &Package{}
+				newPkg.Name = namePkg
+				if s.Name.Name != "." {
+					ctx.PackagesMap[s.Name.Name] = newPkg
 					ctx.Env.AppendPackage(newPkg)
+				} else {
+
+					if _, isTrue := ctx.Env.PackageByName(namePkg); isTrue {
+						return
+					}
+
+					basePath := ""
+					if basePath, exrr = ctx.Env.basePath(); exrr != nil {
+						return exrr
+					}
+
+					basePath = fmt.Sprintf("%s/%s", basePath, namePkg)
+					if exrr = ctx.Env.ParsePackage(basePath, false); exrr != nil {
+						return exrr
+					}
+					ctx.PackagesMap[s.Name.Name+namePkg], _ = ctx.Env.PackageByName(namePkg)
 				}
 			}
-			getRefType(ctx, s.Name.Name)
+
+			if refType, exrr = ctx.GetRefType(s.Name.Name); exrr != nil {
+				if refType, exrr = currentPackage.AppendRefType(s.Name.Name); exrr != nil {
+					return exrr
+				}
+			}
 		} else {
 			_, ok := ctx.PackageByName(namePkg)
 			if !ok {
@@ -131,37 +219,66 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments *[]string) {
 					ctx.Env.AppendPackage(newPkg)
 				}
 			}
-			getRefType(ctx, namePkg)
+			if refType, exrr = ctx.GetRefType(namePkg); exrr != nil {
+				if refType, exrr = currentPackage.AppendRefType(namePkg); exrr != nil {
+					return exrr
+				}
+			}
 		}
 	case *ast.ValueSpec:
-		parseVariable(currentPackage, s)
+		//parseVariable(currentPackage, s)
 	}
+	return
 }
 
-func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struct) {
+func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struct) (exrr error) {
+
+	currentPackage, ok := ctx.PackageByName(ctx.File.Name.Name)
+	if !ok {
+		return errors.New("Package not found during parse Struct")
+	}
 
 	for _, field := range astStruct.Fields.List {
-		refType := &RefType{}
+		var refType *RefType
 
 		switch t := field.Type.(type) {
 		case *ast.Ident:
-			refType = getRefType(ctx, t.Name)
+			if refType, exrr = ctx.GetRefType(t.Name); exrr != nil {
+				if refType, exrr = currentPackage.AppendRefType(t.Name); exrr != nil {
+					return exrr
+				}
+			}
 		case *ast.SelectorExpr:
-			refType = getRefType(ctx, t.X.(*ast.Ident).Name)
+			if refType, exrr = ctx.GetRefType(t.X.(*ast.Ident).Name); exrr != nil {
+				if refType, exrr = currentPackage.AppendRefType(t.X.(*ast.Ident).Name); exrr != nil {
+					return exrr
+				}
+			}
 		case *ast.StarExpr:
-			refType = getRefType(ctx, t.X.(*ast.Ident).Name)
+			switch xType := t.X.(type) { // TODO: Check this type
+			case *ast.Ident:
+				if refType, exrr = ctx.GetRefType(xType.Name); exrr != nil {
+					if refType, exrr = currentPackage.AppendRefType(xType.Name); exrr != nil {
+						return exrr
+					}
+				}
+			}
 		}
 
 		f := &Field{}
-		f.Type = refType
+		f.RefType = refType
 		f.Tag.Raw = ""
 		if field.Doc != nil {
 			var comments []string
-			parseComments(field.Doc, &comments)
-			f.Comment = comments
+			if comments, exrr = parseComments(field.Doc); exrr != nil {
+				return exrr
+			}
+			f.Doc = Doc{
+				Comments: comments,
+			}
 		}
 
-		if len(field.Names) > 0 { // TODO(jack): To check/understand multiple names.
+		if len(field.Names) > 0 { // TODO(Jack): To check/understand multiple names.
 			f.Name = field.Names[0].Name
 		}
 
@@ -192,9 +309,10 @@ func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struc
 		}
 		typeStruct.Fields = append(typeStruct.Fields, f)
 	}
+	return nil
 }
 
-func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) {
+func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) (exrr error) {
 	currentPackage := ctx.PackagesMap[ctx.File.Name.Name]
 	method := NewMethodDescriptor(currentPackage, f.Name.Name)
 
@@ -202,18 +320,30 @@ func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) {
 		recvList := f.Recv.List
 		for _, field := range recvList {
 			recv := MethodArgument{}
-			typeName := field.Type.(*ast.StarExpr).X.(*ast.Ident).Name
+			typeName := ""
+			switch recvT := field.Type.(type) {
+			case *ast.StarExpr:
+				typeName = recvT.X.(*ast.Ident).Name
+			}
 
 			recv.Name = field.Names[0].Name
-			recv.Type = getRefType(ctx, typeName)
+			if recv.Type, exrr = ctx.GetRefType(typeName); exrr != nil {
+				if recv.Type, exrr = currentPackage.AppendRefType(typeName); exrr != nil {
+					return exrr
+				}
+			}
 			method.Recv = append(method.Recv, recv)
 		}
 	}
 
 	if f.Doc != nil {
 		var comments []string
-		parseComments(f.Doc, &comments)
-		method.Comment = comments
+		if comments, exrr = parseComments(f.Doc); exrr != nil {
+			return exrr
+		}
+		method.Doc = Doc{
+			Comments: comments,
+		}
 	}
 
 	for _, field := range f.Type.Params.List {
@@ -224,14 +354,28 @@ func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) {
 
 		switch t := field.Type.(type) {
 		case *ast.Ident:
-			argument.Type = getRefType(ctx, t.Name)
+			if argument.Type, exrr = ctx.GetRefType(t.Name); exrr != nil {
+				if argument.Type, exrr = currentPackage.AppendRefType(t.Name); exrr != nil {
+					return exrr
+				}
+			}
 		case *ast.StarExpr:
-			argument.Type = getRefType(ctx, t.X.(*ast.Ident).Name)
+			switch xType := t.X.(type) {
+			case *ast.Ident:
+				if argument.Type, exrr = ctx.GetRefType(xType.Name); exrr != nil {
+					if argument.Type, exrr = currentPackage.AppendRefType(xType.Name); exrr != nil {
+						return exrr
+					}
+				}
+			case *ast.SelectorExpr:
+				fmt.Println(xType.X.(*ast.Ident).Name) // TODO: Check this type
+			}
 		}
 
 		method.Arguments = append(method.Arguments, argument)
 	}
 	currentPackage.Methods = append(currentPackage.Methods, method)
+	return nil
 }
 
 func parseVariable(parent *Package, f *ast.ValueSpec) {
@@ -255,25 +399,4 @@ func parseVariable(parent *Package, f *ast.ValueSpec) {
 			}
 		}
 	}
-}
-
-//This method is temp.
-func getRefType(ctx *parseContext, name string) *RefType {
-	packageCurrent := ctx.PackagesMap[ctx.File.Name.Name]
-
-	for _, pr := range packageCurrent.RefType {
-		if name == pr.Name && packageCurrent == pr.Pkg {
-			return pr
-		}
-	}
-	return newRefType(packageCurrent, name)
-}
-
-func newRefType(parent *Package, name string) *RefType {
-	ref := &RefType{
-		Pkg:  parent,
-		Name: name,
-	}
-	parent.RefType = append(parent.RefType, ref)
-	return ref
 }

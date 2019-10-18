@@ -1,0 +1,13 @@
+package models
+
+import "fmt"
+
+var (
+	a string
+	b byte
+	c int
+	d int64
+	e []string
+	f float32
+	g boolean
+)
