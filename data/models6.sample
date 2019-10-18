@@ -1,23 +1,13 @@
-// Package models is a test
 package models
 
-import (
-	"time"
-)
-
-// User is a model.
-type User struct {
-	ID        int64     `json:"id,uuidTest"`
-	Name      string    `json:"name" bson:""`
-	Email     string    `json:"email"`
-	Password  string    `json:"password,old,newTest,moreField"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time
+func (u *User) getName() string {
+	return u.Name
 }
 
-// Test is a model.
-type Test struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
+func show(name string, age int64) {
+	fmt.Println(age, name)
+}
+
+func welcome() string {
+	return "Welcome"
 }

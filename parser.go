@@ -43,43 +43,53 @@ func parsePackage(ctx *parseContext) {
 
 	_, ok := ctx.Env.PackageByName(ctx.File.Name.Name)
 	if !ok {
-		var comment []string
+		var comments []string
 		if ctx.File.Doc != nil {
-			comment = parseComments(ctx.File.Doc)
+			for _, t := range ctx.File.Comments {
+				parseComments(t, &comments)
+			}
 		}
 		pkg := &Package{
 			Name:    ctx.File.Name.Name,
-			Comment: comment,
+			Comment: comments,
 		}
 		ctx.Env.AppendPackage(pkg)
 		ctx.PackagesMap[ctx.File.Name.Name] = pkg
 	}
 }
 
-func parseComments(doc *ast.CommentGroup) []string {
+func parseComments(doc *ast.CommentGroup, c *[]string) {
 	if doc.List == nil {
-		return nil
+		return
 	}
-	size := len(doc.List)
-	comments := make([]string, size)
-	for i := 0; i < size; i++ {
-		comments[i] = doc.List[i].Text
+
+	sizeList := len(doc.List)
+	if len(*c) != 0 {
+		t := make([]string, sizeList)
+		for i := 0; i < sizeList; i++ {
+			t[i] = doc.List[i].Text
+		}
+		*c = append(*c, t...)
+		return
 	}
-	return comments
+	*c = make([]string, sizeList)
+	for i := 0; i < sizeList; i++ {
+		(*c)[i] = doc.List[i].Text
+	}
 }
 
 func parseGenDecl(ctx *parseContext, s *ast.GenDecl) {
 	var comments []string
 	if s.Doc != nil {
-		comments = parseComments(s.Doc)
+		parseComments(s.Doc, &comments)
 	}
 
 	for _, spec := range s.Specs {
-		parseSpec(ctx, spec, comments)
+		parseSpec(ctx, spec, &comments)
 	}
 }
 
-func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) {
+func parseSpec(ctx *parseContext, spec ast.Spec, comments *[]string) {
 	currentPackage := ctx.PackagesMap[ctx.File.Name.Name]
 
 	switch s := spec.(type) {
@@ -87,9 +97,9 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) {
 		switch t := s.Type.(type) {
 		case *ast.StructType:
 			declStruct := NewStruct(currentPackage, s.Name.Name)
-			declStruct.Comment = comments
+			declStruct.Comment = *comments
 			refType := getRefType(ctx, s.Name.Name)
-			refType.Type = declStruct
+			refType.AppendType(declStruct)
 
 			parseStruct(ctx, t, declStruct)
 			currentPackage.Types = append(currentPackage.Types, declStruct)
@@ -138,13 +148,17 @@ func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struc
 			refType = getRefType(ctx, t.Name)
 		case *ast.SelectorExpr:
 			refType = getRefType(ctx, t.X.(*ast.Ident).Name)
+		case *ast.StarExpr:
+			refType = getRefType(ctx, t.X.(*ast.Ident).Name)
 		}
 
 		f := &Field{}
 		f.Type = refType
 		f.Tag.Raw = ""
 		if field.Doc != nil {
-			f.Comment = parseComments(field.Doc)
+			var comments []string
+			parseComments(field.Doc, &comments)
+			f.Comment = comments
 		}
 
 		if len(field.Names) > 0 { // TODO(jack): To check/understand multiple names.
@@ -185,7 +199,6 @@ func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) {
 	method := NewMethodDescriptor(currentPackage, f.Name.Name)
 
 	if f.Recv != nil { //TODO(check): I don't know if this pointers always will exist if "f.Recv" is diff than nil.
-		structMethod := &StructMethod{}
 		recvList := f.Recv.List
 		for _, field := range recvList {
 			recv := MethodArgument{}
@@ -195,15 +208,12 @@ func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) {
 			recv.Type = getRefType(ctx, typeName)
 			method.Recv = append(method.Recv, recv)
 		}
+	}
 
-		structMethod.Descriptor = method
-		for _, s := range currentPackage.Structs { //TODO(enhancement): Is possible than the Struct has not been read before func.
-			if s.Name() == method.Recv[0].Type.Name {
-				s.Methods = append(s.Methods, structMethod)
-				break
-			}
-		}
-
+	if f.Doc != nil {
+		var comments []string
+		parseComments(f.Doc, &comments)
+		method.Comment = comments
 	}
 
 	for _, field := range f.Type.Params.List {
@@ -212,12 +222,13 @@ func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) {
 			argument.Name = field.Names[0].Name
 		}
 
-		t, ok := field.Type.(*ast.Ident)
-		if !ok {
-			fmt.Println("Treta")
-			continue
+		switch t := field.Type.(type) {
+		case *ast.Ident:
+			argument.Type = getRefType(ctx, t.Name)
+		case *ast.StarExpr:
+			argument.Type = getRefType(ctx, t.X.(*ast.Ident).Name)
 		}
-		argument.Type = getRefType(ctx, t.Name)
+
 		method.Arguments = append(method.Arguments, argument)
 	}
 	currentPackage.Methods = append(currentPackage.Methods, method)
