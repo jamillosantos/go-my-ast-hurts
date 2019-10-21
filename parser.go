@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"go/ast"
+	"go/build"
 	"go/parser"
 	"go/token"
 	"strings"
@@ -20,7 +21,7 @@ func (ctx *parseContext) GetRefType(name string) (ref *RefType, exrr error) {
 
 	builtin, ok := ctx.Env.PackageByName("builtin")
 	if !ok {
-		return nil, errors.New("Pacakge builtin not found")
+		return nil, errors.New("Package builtin not found")
 	}
 
 	if ref = builtin.RefTypeByName(name); ref != nil {
@@ -35,28 +36,27 @@ func (ctx *parseContext) GetRefType(name string) (ref *RefType, exrr error) {
 	return nil, errors.New("RefType not found")
 }
 
-func (env *environment) makeEnv() (exrr error) {
-	path := ""
-	if path, exrr = env.basePath(); exrr != nil {
-		return exrr
+func (env *environment) makeEnv() error {
+	var (
+		err error
+	)
+	builtinPath := "builtin"
+	if err = env.Parse(builtinPath); err != nil {
+		return err
 	}
-	builtinPath := fmt.Sprintf("%s/builtin", path)
-	if exrr = env.ParsePackage(builtinPath, false); exrr != nil {
-		return exrr
-	}
-	return
+	return nil
 }
 
-func (env *environment) parse(fileLocation string) (exrr error) {
-
+func (env *environment) parse(filePath string) error {
 	var (
 		file *ast.File
 		fset *token.FileSet
+		err  error
 	)
 
 	fset = token.NewFileSet()
-	if file, exrr = parser.ParseFile(fset, fileLocation, nil, parser.ParseComments); exrr != nil {
-		return exrr
+	if file, err = parser.ParseFile(fset, filePath, nil, parser.ParseComments); err != nil {
+		return err
 	}
 
 	ctx := &parseContext{
@@ -69,37 +69,44 @@ func (env *environment) parse(fileLocation string) (exrr error) {
 		ast.Print(fset, file)
 	}
 
-	parseFileName(ctx)
+	err = parseFileName(ctx)
+	if err != nil {
+		return err
+	}
 
 	decls := file.Decls
 	for _, d := range decls {
 		switch c := d.(type) {
 		case *ast.GenDecl:
-			parseGenDecl(ctx, c)
+			err = parseGenDecl(ctx, c)
+			if err != nil {
+				return err
+			}
 		case *ast.FuncDecl:
-			parseFuncDecl(ctx, c)
+			err = parseFuncDecl(ctx, c)
+			if err != nil {
+				return err
+			}
+			// TODO(jota): We should have a default case here. Shall it return an error?
 		}
 	}
-	return
+	return nil
 }
 
-func parseFileName(ctx *parseContext) (exrr error) {
-
-	pkge, ok := ctx.Env.PackageByName(ctx.File.Name.Name)
+func parseFileName(ctx *parseContext) error {
+	pkg, ok := ctx.Env.PackageByName(ctx.File.Name.Name)
 	if !ok {
-		var (
-			comments []string
-		)
+		var comments []string
 		if ctx.File.Doc != nil {
 			for _, t := range ctx.File.Comments {
-				if rComments, exrr := parseComments(t); exrr == nil {
-					comments = append(comments, rComments...)
-					continue
+				rComments, err := parseComments(t)
+				if err != nil {
+					return err
 				}
-				return exrr
+				comments = append(comments, rComments...)
 			}
 		}
-		pkg := &Package{
+		pkg = &Package{
 			Name: ctx.File.Name.Name,
 			Doc: Doc{
 				Comments: comments,
@@ -108,7 +115,7 @@ func parseFileName(ctx *parseContext) (exrr error) {
 		ctx.Env.AppendPackage(pkg)
 		ctx.PackagesMap[ctx.File.Name.Name] = pkg
 	} else {
-		ctx.PackagesMap[ctx.File.Name.Name] = pkge
+		ctx.PackagesMap[ctx.File.Name.Name] = pkg
 	}
 	return nil
 }
@@ -123,24 +130,33 @@ func parseComments(doc *ast.CommentGroup) (r []string, exrr error) {
 	return t, nil
 }
 
-func parseGenDecl(ctx *parseContext, s *ast.GenDecl) (exrr error) {
-	var comments []string
+func parseGenDecl(ctx *parseContext, s *ast.GenDecl) error {
+	var (
+		comments []string
+		err      error
+	)
 
 	if s.Doc != nil {
-		if comments, exrr = parseComments(s.Doc); exrr != nil {
-			return exrr
+		if comments, err = parseComments(s.Doc); err != nil {
+			return err
 		}
 	}
 
 	for _, spec := range s.Specs {
-		parseSpec(ctx, spec, comments)
+		err = parseSpec(ctx, spec, comments)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) (exrr error) {
+func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) error {
 	currentPackage := ctx.PackagesMap[ctx.File.Name.Name]
-	var refType *RefType
+	var (
+		refType *RefType
+		err     error
+	)
 
 	switch s := spec.(type) {
 	case *ast.TypeSpec:
@@ -152,7 +168,7 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) (exrr error)
 				Comments: comments,
 			}
 
-			if refType, exrr = ctx.GetRefType(s.Name.Name); exrr != nil {
+			if refType, err = ctx.GetRefType(s.Name.Name); err != nil {
 				if refType = currentPackage.AppendRefType(s.Name.Name); refType == nil {
 					return errors.New("Append Reftype error")
 				}
@@ -160,7 +176,10 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) (exrr error)
 
 			refType.AppendType(declStruct)
 
-			parseStruct(ctx, t, declStruct)
+			err = parseStruct(ctx, t, declStruct)
+			if err != nil {
+				return err
+			}
 			currentPackage.Types = append(currentPackage.Types, declStruct)
 		case *ast.Ident:
 			if ctx.File.Name.Name == "builtin" {
@@ -179,29 +198,36 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) (exrr error)
 			if !ok {
 				newPkg := &Package{}
 				newPkg.Name = namePkg
-				if s.Name.Name != "." {
+
+				// This checks if the import is a dot import. That means we have
+				// to include this imported package into a special list for
+				// prior querying. Dot imports include all types declared into
+				// the same contexts for this file. So, types don't have the
+				// package identification.
+				if s.Name.Name == "." {
+					// TODO(jota): Does that mean the package was already explored?
+					if _, ok := ctx.Env.PackageByName(namePkg); ok {
+						return nil
+					}
+
+					// TODO(jota): To parametrize the import source directory.
+					pkg, err := ctx.Env.BuildContext.Import(namePkg, ".", build.FindOnly)
+					if err != nil {
+						return err
+					}
+
+					// Parse the package.
+					if err = ctx.Env.parsePackage(pkg); err != nil {
+						return err
+					}
+					ctx.PackagesMap[pkg.ImportPath], _ = ctx.Env.PackageByName(namePkg)
+				} else {
 					ctx.PackagesMap[s.Name.Name] = newPkg
 					ctx.Env.AppendPackage(newPkg)
-				} else {
-
-					if _, isTrue := ctx.Env.PackageByName(namePkg); isTrue {
-						return
-					}
-
-					basePath := ""
-					if basePath, exrr = ctx.Env.basePath(); exrr != nil {
-						return exrr
-					}
-
-					basePath = fmt.Sprintf("%s/%s", basePath, namePkg)
-					if exrr = ctx.Env.ParsePackage(basePath, false); exrr != nil {
-						return exrr
-					}
-					ctx.PackagesMap[s.Name.Name+namePkg], _ = ctx.Env.PackageByName(namePkg)
 				}
 			}
 
-			if refType, exrr = ctx.GetRefType(s.Name.Name); exrr != nil {
+			if refType, err = ctx.GetRefType(s.Name.Name); err != nil {
 				if refType = currentPackage.AppendRefType(s.Name.Name); refType == nil {
 					return errors.New("Append Reftype error")
 				}
@@ -218,7 +244,7 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) (exrr error)
 					ctx.Env.AppendPackage(newPkg)
 				}
 			}
-			if refType, exrr = ctx.GetRefType(namePkg); exrr != nil {
+			if refType, err = ctx.GetRefType(namePkg); err != nil {
 				if refType = currentPackage.AppendRefType(namePkg); refType == nil {
 					return errors.New("Append Reftype error")
 				}
@@ -230,11 +256,10 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) (exrr error)
 			currentPackage.AppendVariable(vrle)
 		}
 	}
-	return
+	return nil
 }
 
 func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struct) (exrr error) {
-
 	currentPackage, ok := ctx.PackageByName(ctx.File.Name.Name)
 	if !ok {
 		return errors.New("Package not found during parse Struct")

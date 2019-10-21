@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"go/ast"
+	"go/build"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -26,9 +27,10 @@ type EnvConfig struct {
 }
 
 type environment struct {
-	packages    []*Package
-	packagesMap map[string]*Package
-	Config      EnvConfig
+	BuildContext build.Context
+	packages     []*Package
+	packagesMap  map[string]*Package
+	Config       EnvConfig
 }
 
 // Field is utilized in Struct type in the present moment.
@@ -157,15 +159,15 @@ func (doc *Doc) FormatComment() string {
 }
 
 // NewEnvironment is the method allow start parse in file
-func NewEnvironment() (env *environment, exrr error) {
-
-	env = &environment{
-		packages:    []*Package{},
-		packagesMap: map[string]*Package{},
+func NewEnvironment() (*environment, error) {
+	env := &environment{
+		packages:     []*Package{},
+		packagesMap:  map[string]*Package{},
+		BuildContext: build.Default,
 	}
 
-	if exrr = env.makeEnv(); exrr != nil {
-		return nil, exrr
+	if err := env.makeEnv(); err != nil {
+		return nil, err
 	}
 	return env, nil
 }
@@ -182,35 +184,41 @@ func (env *environment) AppendPackage(pkg *Package) {
 	env.packagesMap[pkg.Name] = pkg
 }
 
-// ParsePackage checks if the Path ou File exist before of parse.
-func (env *environment) ParsePackage(pathOrName string, isFile bool) (exrr error) {
+func (env *environment) parsePackage(pkg *build.Package) error {
+	files, err := ioutil.ReadDir(pkg.Dir)
+	if err != nil {
+		return err
+	}
 
-	if isFile {
-		if _, ok := os.Stat(pathOrName); os.IsNotExist(ok) {
-			return errors.New("File not found")
-		}
-		env.parse(pathOrName)
-	} else {
-		files, err := ioutil.ReadDir(pathOrName)
+	for _, file := range files {
+		fileName := file.Name()
+		s, err := regexp.MatchString(`(?ms)test\b`, fileName)
 		if err != nil {
 			return err
 		}
-
-		for _, file := range files {
-			fileName := file.Name()
-			if s, _ := regexp.MatchString(`(?ms)test\b`, fileName); s {
-				continue
-			}
-			fileLocation := fmt.Sprintf("%s/%s", pathOrName, fileName)
-			env.parse(fileLocation)
+		if s {
+			continue
 		}
+		fileLocation := fmt.Sprintf("%s/%s", pkg.Dir, fileName)
+		env.parse(fileLocation)
 	}
-
-	return
+	return nil
 }
 
-func (env *environment) basePath() (rtn string, exrr error) {
+// Parse checks if the parse was already done, if not, it parses the package.
+func (env *environment) Parse(packageName string) error {
+	ctx := &env.BuildContext
 
+	// Find the path of the package.
+	pkg, err := ctx.Import(packageName, ".", build.FindOnly)
+	if err != nil {
+		return err
+	}
+
+	return env.parsePackage(pkg)
+}
+
+func (env *environment) gorootSourceDir() (rtn string, exrr error) {
 	if rtn = os.Getenv("GOROOT"); rtn == "" {
 		return "", errors.New("GOROOT environment variable not found or is empty")
 	}
