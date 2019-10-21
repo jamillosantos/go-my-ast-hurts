@@ -1,12 +1,7 @@
 package myasthurts
 
 import (
-	"errors"
-	"fmt"
-	"go/ast"
 	"go/build"
-	"io/ioutil"
-	"os"
 	"regexp"
 	"strings"
 )
@@ -24,13 +19,6 @@ type Doc struct {
 type EnvConfig struct {
 	DevMode bool
 	ASTI    bool
-}
-
-type environment struct {
-	BuildContext build.Context
-	packages     []*Package
-	packagesMap  map[string]*Package
-	Config       EnvConfig
 }
 
 // Field is utilized in Struct type in the present moment.
@@ -83,7 +71,9 @@ type MethodResult struct {
 
 type Package struct {
 	Name        string
-	Directory   string
+	ImportPath  string
+	RealPath    string
+	explored    bool
 	Doc         Doc
 	Variables   []*Variable
 	Constants   []*constant
@@ -97,10 +87,12 @@ type Package struct {
 	Subpackages []*Package
 }
 
-type parseContext struct {
-	File        *ast.File
-	Env         *environment
-	PackagesMap map[string]*Package
+func NewPackage(buildPackage *build.Package) *Package {
+	return &Package{
+		Name:       buildPackage.Name,
+		ImportPath: buildPackage.ImportPath,
+		RealPath:   buildPackage.Dir,
+	}
 }
 
 type RefType struct {
@@ -158,73 +150,6 @@ func (doc *Doc) FormatComment() string {
 	return str
 }
 
-// NewEnvironment is the method allow start parse in file
-func NewEnvironment() (*environment, error) {
-	env := &environment{
-		packages:     []*Package{},
-		packagesMap:  map[string]*Package{},
-		BuildContext: build.Default,
-	}
-
-	if err := env.makeEnv(); err != nil {
-		return nil, err
-	}
-	return env, nil
-}
-
-// PackageByName find Package by name in Environment.
-func (env *environment) PackageByName(name string) (*Package, bool) {
-	pkg, ok := env.packagesMap[name]
-	return pkg, ok
-}
-
-// AppendPackage add new Pacakge in Environment.
-func (env *environment) AppendPackage(pkg *Package) {
-	env.packages = append(env.packages, pkg)
-	env.packagesMap[pkg.Name] = pkg
-}
-
-func (env *environment) parsePackage(pkg *build.Package) error {
-	files, err := ioutil.ReadDir(pkg.Dir)
-	if err != nil {
-		return err
-	}
-
-	for _, file := range files {
-		fileName := file.Name()
-		s, err := regexp.MatchString(`(?ms)test\b`, fileName)
-		if err != nil {
-			return err
-		}
-		if s {
-			continue
-		}
-		fileLocation := fmt.Sprintf("%s/%s", pkg.Dir, fileName)
-		env.parse(fileLocation)
-	}
-	return nil
-}
-
-// Parse checks if the parse was already done, if not, it parses the package.
-func (env *environment) Parse(packageName string) error {
-	ctx := &env.BuildContext
-
-	// Find the path of the package.
-	pkg, err := ctx.Import(packageName, ".", build.FindOnly)
-	if err != nil {
-		return err
-	}
-
-	return env.parsePackage(pkg)
-}
-
-func (env *environment) gorootSourceDir() (rtn string, exrr error) {
-	if rtn = os.Getenv("GOROOT"); rtn == "" {
-		return "", errors.New("GOROOT environment variable not found or is empty")
-	}
-	return fmt.Sprintf("%s/src", rtn), nil
-}
-
 // NewInterface Create new Interface.
 func NewInterface(pkg *Package, name string) *Interface {
 	return &Interface{
@@ -277,13 +202,13 @@ func (p *Package) StructByName(name string) *Struct {
 }
 
 // RefTypeByName find RefType by name.
-func (p *Package) RefTypeByName(name string) (ref *RefType) {
+func (p *Package) RefTypeByName(name string) (*RefType, bool) {
 	for _, pp := range p.RefType {
 		if name == pp.Name {
-			return pp
+			return pp, true
 		}
 	}
-	return nil
+	return nil, false
 }
 
 // AppendRefType add new RefType in Package.
