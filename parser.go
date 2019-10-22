@@ -104,82 +104,38 @@ func parseSpec(ctx *parseFileContext, spec ast.Spec, docComments []string) error
 		}
 
 	case *ast.ImportSpec:
-		// TODO(jota): To try simplifying this code.
-
 		importPathPkg := s.Path.Value[1 : len(s.Path.Value)-1]
+
+		// Tries to find the package on the list...
+		pkg, pkgExists := ctx.Env.PackageByImportPath(importPathPkg)
+
+		// TODO(jota): To parametrize the import source directory.
+		buildPackage, err := ctx.Env.BuildContext.Import(importPathPkg, ".", build.ImportComment)
+		if err != nil {
+			return err
+		}
+
+		if !pkgExists {
+			pkg = NewPackage(buildPackage)
+			ctx.Env.AppendPackage(pkg)
+		}
+
 		if s.Name != nil { // The name is the identifier of the import. Ex: t "time", t would be the name
-			// Tries to find the package on the list...
-			_, ok := ctx.PackageByImportAlias(s.Name.Name)
-			if !ok {
-				// This checks if the import is a dot import. That means we have
-				// to include this imported package into a special list for
-				// prior querying. Dot imports include all types declared into
-				// the same contexts for this file. So, types don't have the
-				// package identification.
-				if s.Name.Name == "." { // TODO(jota): This should be done before the right previous IF [ _, ok := ctx.PackageByImportAlias(s.Name.Name) ].
-					// TODO(jota): Does that mean the package was already explored?
-					if pkg, ok := ctx.Env.PackageByImportPath(importPathPkg); ok {
-						// If the package already exists...
-						ctx.dotImports = append(ctx.dotImports, pkg)
-						return nil
-					}
-
-					// TODO(jota): To parametrize the import source directory.
-					buildPackage, err := ctx.Env.BuildContext.Import(importPathPkg, ".", build.ImportComment)
-					if err != nil {
-						return err
-					}
-
-					newPkg := NewPackage(buildPackage)
-					pkgCtx := NewPackageContext(newPkg, buildPackage)
-					// Parse the package.
-					if err = ctx.Env.parsePackage(pkgCtx); err != nil {
-						return err
-					}
-					ctx.Env.AppendPackage(newPkg)
-					// Add the package as dot imported on this context.
-					ctx.dotImports = append(ctx.dotImports, newPkg)
-				} else {
-
-					// TODO(jota): To parametrize the import source directory.
-					buildPackage, err := ctx.Env.BuildContext.Import(importPathPkg, ".", build.ImportComment)
-					if err != nil {
-						return err
-					}
-
-					newPkg := NewPackage(buildPackage)
-					ctx.packageImportAliasMap[s.Name.Name] = newPkg
-					ctx.Env.AppendPackage(newPkg)
-				}
-			}
-
-			if refType, err = ctx.GetRefType(s.Name.Name); err != nil {
-				if refType = currentPackage.AppendRefType(s.Name.Name); refType == nil {
-					return errors.New("Append Reftype error")
-				}
-			}
-		} else {
-			_, ok := ctx.PackageByImportAlias(importPathPkg)
-			if !ok { // The package is not in the memory yet
-				// TODO(jota): To parametrize the import source directory.
-				buildPackage, err := ctx.Env.BuildContext.Import(importPathPkg, ".", build.ImportComment)
-				if err != nil {
+			// This checks if the import is a dot import. That means we have
+			// to include this imported package into a special list for
+			// prior querying. Dot imports include all types declared into
+			// the same contexts for this file. So, types don't have the
+			// package identification.
+			if s.Name.Name == "." {
+				pkgCtx := NewPackageContext(pkg, buildPackage)
+				if err = ctx.Env.parsePackage(pkgCtx); err != nil {
 					return err
 				}
-
-				// Since it is not a dot import, we don't have to explore it now.
-				newPkg := NewPackage(buildPackage)
-				ctx.Env.AppendPackage(newPkg)
+				ctx.dotImports = append(ctx.dotImports, pkg) // If we do explore, it means the package is dot imported.
+			} else {
+				// Sets the alias of the package for this file context.
+				ctx.packageImportAliasMap[s.Name.Name] = pkg
 			}
-
-			// TODO(jota): I don't see the need of this now.
-			/*
-				if refType, err = ctx.GetRefType(namePkg); err != nil {
-					if refType = currentPackage.AppendRefType(namePkg); refType == nil {
-						return errors.New("Append Reftype error")
-					}
-				}
-			*/
 		}
 	case *ast.ValueSpec:
 		if currentPackage.Name != "builtin" {
