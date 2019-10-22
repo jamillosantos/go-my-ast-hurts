@@ -35,12 +35,6 @@ type parseFileContext struct {
 	Package               *Package
 	dotImports            []*Package
 	packageImportAliasMap map[string]*Package
-	packageImportPathMap  map[string]*Package
-}
-
-func (ctx *parseFileContext) PackageByImportPath(name string) (*Package, bool) {
-	pkg, ok := ctx.packageImportPathMap[name]
-	return pkg, ok
 }
 
 func (ctx *parseFileContext) PackageByImportAlias(name string) (*Package, bool) {
@@ -50,21 +44,21 @@ func (ctx *parseFileContext) PackageByImportAlias(name string) (*Package, bool) 
 
 // GetRefType will return a type defined on the context or in the dot imported
 // libraries. If no file exists, it will return an `ErrTypeNotFound`.
-func (ctx *parseFileContext) GetRefType(name string) (RefType, error) {
+func (ctx *parseFileContext) GetRefType(name string) (RefType, bool) {
 	// First, it tries to find the type on its own package.
 	if t, ok := ctx.Package.RefTypeByName(name); ok {
-		return t, nil
+		return t, true
 	}
 
 	// Now, it tries to find into the dot imported libraries.
 	for _, pkg := range ctx.dotImports {
 		if t, ok := pkg.RefTypeByName(name); ok {
-			return t, nil
+			return t, true
 		}
 	}
 
 	// Givin' up, never so easy...
-	return nil, ErrTypeNotFound
+	return nil, false
 }
 
 type environment struct {
@@ -190,7 +184,6 @@ func (env *environment) parseFile(pkgCtx *parsePackageContext, filePath string) 
 			env.BuiltIn,
 		},
 		packageImportAliasMap: make(map[string]*Package),
-		packageImportPathMap:  make(map[string]*Package),
 	}
 
 	// Prints the AST, if configured.

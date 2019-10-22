@@ -1,13 +1,13 @@
 package myasthurts
 
 import (
-	"errors"
 	"fmt"
 	"go/ast"
 	"go/build"
 	"strings"
 
 	"github.com/fatih/structtag"
+	"github.com/pkg/errors"
 )
 
 func parseFileName(ctx *parseFileContext) error {
@@ -154,43 +154,16 @@ func parseSpec(ctx *parseFileContext, spec ast.Spec, docComments []string) error
 }
 
 func parseStruct(ctx *parseFileContext, astStruct *ast.StructType, typeStruct *Struct) error {
-	currentPackage := ctx.Package
-
 	for _, field := range astStruct.Fields.List {
-		var (
-			refType RefType
-			err     error
-		)
-
-		// TODO(jota): Add a default case returning an error.
-		switch t := field.Type.(type) {
-		case *ast.Ident: // this is a type like int64
-			if refType, err = ctx.GetRefType(t.Name); err != nil {
-				if refType = currentPackage.AppendRefType(t.Name); refType == nil {
-					return errors.New("Append Reftype error")
-				}
-			}
-		case *ast.SelectorExpr:
-			if refType, err = ctx.GetRefType(t.X.(*ast.Ident).Name); err != nil {
-				if refType = currentPackage.AppendRefType(t.X.(*ast.Ident).Name); refType == nil {
-					return errors.New("Append Reftype error")
-				}
-			}
-		case *ast.StarExpr: // This is a pointer declaration.
-			// TODO(jota): A new RefType type should be created to express pointers.
-			// TODO(jota): Add a default case returning an error.
-			switch xType := t.X.(type) { // TODO: Check this type
-			case *ast.Ident:
-				if refType, err = ctx.GetRefType(xType.Name); err != nil {
-					if refType = currentPackage.AppendRefType(xType.Name); refType == nil {
-						return errors.New("Append Reftype error")
-					}
-				}
-			}
+		refType, err := parseType(ctx, field.Type)
+		if err != nil {
+			return err
 		}
 
-		f := &Field{}
-		f.RefType = refType
+		f := &Field{
+			RefType: refType,
+		}
+
 		if field.Doc != nil {
 			var docComments []string
 			if docComments, err = parseComments(field.Doc); err != nil {
@@ -229,6 +202,7 @@ func parseStruct(ctx *parseFileContext, astStruct *ast.StructType, typeStruct *S
 				f.Tag.AppendTagParam(tp)
 			}
 		}
+
 		typeStruct.Fields = append(typeStruct.Fields, f)
 	}
 	return nil
@@ -241,18 +215,9 @@ func parseFuncDecl(ctx *parseFileContext, f *ast.FuncDecl) (err error) {
 		field := f.Recv.List[0]
 
 		recv := MethodArgument{}
-		var refType RefType
-		switch recvT := field.Type.(type) {
-		case *ast.Ident:
-			// TODO(jota): To check for non pointer types.
-		case *ast.StarExpr:
-			typeName := recvT.X.(*ast.Ident).Name
-			rt, ok := ctx.Package.RefTypeByName(typeName)
-			if !ok {
-				rt = NewRefType(typeName, ctx.Package, NewBaseType(ctx.Package, typeName))
-				ctx.Package.AddRefType(rt)
-			}
-			refType = rt
+		refType, err := parseType(ctx, field.Type)
+		if err != nil {
+			return err
 		}
 
 		recv.Name = field.Names[0].Name
@@ -279,6 +244,8 @@ func parseFuncDecl(ctx *parseFileContext, f *ast.FuncDecl) (err error) {
 		}
 	}
 
+	var ok bool
+
 	for _, field := range f.Type.Params.List {
 		argument := MethodArgument{}
 		if len(field.Names) > 0 {
@@ -287,7 +254,7 @@ func parseFuncDecl(ctx *parseFileContext, f *ast.FuncDecl) (err error) {
 
 		switch t := field.Type.(type) {
 		case *ast.Ident:
-			if argument.Type, err = ctx.GetRefType(t.Name); err != nil {
+			if argument.Type, ok = ctx.GetRefType(t.Name); !ok {
 				if argument.Type = ctx.Package.AppendRefType(t.Name); argument.Type == nil {
 					return errors.New("Append Reftype error")
 				}
@@ -295,7 +262,7 @@ func parseFuncDecl(ctx *parseFileContext, f *ast.FuncDecl) (err error) {
 		case *ast.StarExpr:
 			switch xType := t.X.(type) {
 			case *ast.Ident:
-				if argument.Type, err = ctx.GetRefType(xType.Name); err != nil {
+				if argument.Type, ok = ctx.GetRefType(xType.Name); !ok {
 					if argument.Type = ctx.Package.AppendRefType(xType.Name); argument.Type == nil {
 						return errors.New("Append Reftype error")
 					}
@@ -308,6 +275,48 @@ func parseFuncDecl(ctx *parseFileContext, f *ast.FuncDecl) (err error) {
 		method.Arguments = append(method.Arguments, argument)
 	}
 	return nil
+}
+
+// parseType will return a RefType for a given type.
+func parseType(ctx *parseFileContext, t ast.Expr) (RefType, error) {
+	switch recvT := t.(type) {
+	// This case will cover the identifier type. This is for string, int64 and
+	// types defined on the same package.
+	case *ast.Ident:
+		typeName := recvT.Name
+		rt, ok := ctx.GetRefType(typeName)
+		if !ok {
+			rt = NewRefType(typeName, ctx.Package, NewBaseType(ctx.Package, typeName))
+			ctx.Package.AddRefType(rt)
+		}
+		return rt, nil
+	// This case will cover the selector type. This is for expressions like
+	// time.Time or t.Time, models.User ...
+	case *ast.SelectorExpr:
+		pkgAliasIdent, ok := recvT.X.(*ast.Ident)
+		if !ok { // We expect the recvT.X is a ast.Ident, if not...
+			// TODO(jota): To formalize this error.
+			return nil, errors.New("unexpected selector identifier")
+		}
+		pkgAlias, ok := ctx.PackageByImportAlias(pkgAliasIdent.Name)
+		if !ok { // The package does not exists in the ctx?? It should not be happening...
+			// TODO(jota): To formalize this error.
+			return nil, fmt.Errorf("package %s was not found", pkgAliasIdent.Name)
+		}
+		refType, _ := pkgAlias.EnsureRefType(recvT.Sel.Name) // We don't care if the refType is created now or not.
+		return refType, nil
+	// This case covers pointers. It is recursive because pointers can be for
+	// identifiers or selectors...
+	case *ast.StarExpr:
+		// TODO(jota): To create a RefType that represents a pointer and wraps the result before returning.
+		return parseType(ctx, recvT.X)
+	case *ast.ArrayType:
+		// TODO(jota): To create a RefType that represents an array and wraps the result before returning.
+		return parseType(ctx, recvT.Elt)
+	// This is a safeguard for unexpected cases.
+	default:
+		return nil, fmt.Errorf("%T: unexpected expression type", t)
+	}
 }
 
 func parseVariable(parent *Package, f *ast.ValueSpec) (vrle *Variable) {

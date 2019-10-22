@@ -265,8 +265,23 @@ func (p *Package) StructByName(name string) *Struct {
 	return nil
 }
 
+// EnsureRefType will try to get the RefType from the list by the name param. If
+// the RefType exists, it will return the reference with true (second return).
+// If it is does not exists in the list, the function will create a new type and
+// return it with false (second return).
+func (p *Package) EnsureRefType(name string) (RefType, bool) {
+	refType, ok := p.RefTypeByName(name)
+	if ok {
+		return refType, true
+	}
+	refType = NewRefType(name, p, nil)
+	p.AddRefType(refType)
+	return refType, false
+}
+
 // RefTypeByName find RefType by name.
 func (p *Package) RefTypeByName(name string) (RefType, bool) {
+	// TODO(jota): Create a map for improve the performance of this.
 	for _, pp := range p.RefType {
 		if name == pp.Name() {
 			return pp, true

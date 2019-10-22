@@ -15,7 +15,7 @@ require (
 	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.0
-	github.com/pkg/errors v0.8.1 // indirect
+	github.com/pkg/errors v0.8.1
 	github.com/valyala/fasthttp v1.5.0 // indirect
 	golang.org/x/tools v0.0.0-20190906203814-12febf440ab1
 	gopkg.in/go-playground/validator.v9 v9.30.0 // indirect
