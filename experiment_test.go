@@ -302,27 +302,6 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(b).ToNot(BeNil())
 			Expect(b.RefType).ToNot(BeNil())
 		})
-
-		It("should check named types", func() {
-
-			env, exrr := NewEnvironment()
-			Expect(exrr).To(BeNil())
-			env.Config = EnvConfig{
-				DevMode: true,
-				ASTI:    false,
-			}
-
-			exrr = env.parseFile(newDataPackageContext(env), "data/models16.sample.go")
-			builtin, _ := env.PackageByImportPath("builtin")
-			Expect(builtin).ToNot(BeNil())
-			Expect(exrr).To(BeNil())
-
-			_, ok := env.PackageByImportPath("data")
-			Expect(ok).To(BeTrue())
-
-			/** WIP */
-		})
-
 	})
 
 	When("parsing function", func() {
@@ -522,7 +501,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 			Expect(pkg.Methods).To(HaveLen(2))
 			Expect(pkg.Methods[0].Doc.Comments).To(HaveLen(1))
-			Expect(pkg.Methods[0].Doc.Comments[0]).To(Equal("/** Description\n  multilines\n*/"))
+			Expect(pkg.Methods[0].Doc.Comments[0]).To(Equal("/** Description \n    multilines\n*/"))
 			Expect(pkg.Methods[1].Doc.Comments).To(BeEmpty())
 		})
 	})

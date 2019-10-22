@@ -72,11 +72,9 @@ type environment struct {
 	// packageMap stores the *Packages reference by its import name.
 	packageMap map[string]*Package
 
-	// TODO(jota): What does it do?
 	Config EnvConfig
 }
 
-// NewEnvironment is the method allow start parse in file.
 func NewEnvironment() (*environment, error) {
 	env := &environment{
 		packages:     make([]*Package, 0, 5),
@@ -88,6 +86,21 @@ func NewEnvironment() (*environment, error) {
 		return nil, err
 	}
 	return env, nil
+}
+
+func (env *environment) Import(importPathPkg string) (*build.Package, error) {
+	d := "."
+	if env.Config.CurrentDir != "" {
+		d = env.Config.CurrentDir
+	}
+	buildPkg, err := env.BuildContext.Import(importPathPkg, d, build.ImportComment)
+	if err != nil {
+		return nil, err
+	}
+	if err != nil {
+		return nil, err
+	}
+	return buildPkg, nil
 }
 
 // PackageByImportPath find Package by name in Environment.
@@ -201,7 +214,6 @@ func (env *environment) parseFile(pkgCtx *parsePackageContext, filePath string) 
 
 	decls := file.Decls
 	for _, d := range decls {
-		// TODO(jota): We must have a default case here. Shall it return an error?
 		switch c := d.(type) {
 		case *ast.GenDecl:
 			err = parseGenDecl(fileCtx, c)
@@ -213,7 +225,11 @@ func (env *environment) parseFile(pkgCtx *parsePackageContext, filePath string) 
 			if err != nil {
 				return err
 			}
+
+		default:
+			return errors.New("Decl not found")
 		}
+
 	}
 	return nil
 }

@@ -1,12 +1,13 @@
 package myasthurts
 
 import (
+	"fmt"
 	"go/build"
 	"regexp"
 	"strings"
 )
 
-type constant struct {
+type Constant struct {
 	Name string
 	Type Type
 }
@@ -17,8 +18,13 @@ type Doc struct {
 
 // EnvConfig is a Struct to set config in Environment
 type EnvConfig struct {
-	DevMode bool
-	ASTI    bool
+	DevMode    bool
+	ASTI       bool
+	CurrentDir string
+}
+
+func (ec EnvConfig) CWD() string {
+	return ec.CurrentDir
 }
 
 // Field is utilized in Struct type in the present moment.
@@ -35,7 +41,7 @@ type File struct {
 	FileName   string
 	Doc        Doc
 	Variables  []*Variable
-	Constants  []*constant
+	Constants  []*Constant
 	Structs    []*Struct
 	Interfaces []*Interface
 	Files      []*File
@@ -76,11 +82,13 @@ type Package struct {
 	explored    bool
 	Doc         Doc
 	Variables   []*Variable
-	Constants   []*constant
+	Constants   []*Constant
 	Methods     []*MethodDescriptor
+	methodMap   map[string]*MethodDescriptor
 	Structs     []*Struct
 	Interfaces  []*Interface
 	RefType     []RefType
+	refTypeMap  map[string]RefType
 	Types       []Type
 	Files       []*File
 	Parent      *Package
@@ -92,10 +100,20 @@ func NewPackage(buildPackage *build.Package) *Package {
 		Name:       buildPackage.Name,
 		ImportPath: buildPackage.ImportPath,
 		RealPath:   buildPackage.Dir,
+		Constants:  make([]*Constant, 0),
+		Methods:    make([]*MethodDescriptor, 0),
+		Variables:  make([]*Variable, 0),
+		methodMap:  make(map[string]*MethodDescriptor),
+		Structs:    make([]*Struct, 0),
+		Interfaces: make([]*Interface, 0),
 		RefType: []RefType{
 			NullRefType,
 			InterfaceRefType,
 		},
+		refTypeMap:  make(map[string]RefType),
+		Types:       make([]Type, 0),
+		Files:       make([]*File, 0),
+		Subpackages: make([]*Package, 0),
 	}
 }
 
@@ -146,6 +164,163 @@ func (rt *BaseRefType) AppendType(tp Type) {
 	rt.t = tp
 }
 
+type StarRefType struct {
+	RefType
+}
+
+func NewStarRefType(refType RefType) *StarRefType {
+	return &StarRefType{
+		RefType: refType,
+	}
+}
+
+func (refType *StarRefType) Name() string {
+	return refType.RefType.Name()
+}
+
+func (refType *StarRefType) Pkg() *Package {
+	return refType.RefType.Pkg()
+}
+
+func (refType *StarRefType) Type() Type {
+	return refType.RefType.Type()
+}
+
+func (refType *StarRefType) AppendType(tp Type) {
+	refType.RefType.AppendType(tp)
+}
+
+type ArrayRefType struct {
+	RefType
+}
+
+func NewArrayRefType(refType RefType) *ArrayRefType {
+	return &ArrayRefType{
+		RefType: refType,
+	}
+}
+
+func (refType *ArrayRefType) Name() string {
+	return refType.RefType.Name()
+}
+
+func (refType *ArrayRefType) Pkg() *Package {
+	return refType.RefType.Pkg()
+}
+
+func (refType *ArrayRefType) Type() Type {
+	return refType.RefType.Type()
+}
+
+func (refType *ArrayRefType) AppendType(tp Type) {
+	refType.RefType.AppendType(tp)
+}
+
+type ChanRefType struct {
+	RefType
+}
+
+func NewChanRefType(refType RefType) *ChanRefType {
+	return &ChanRefType{
+		RefType: refType,
+	}
+}
+
+func (refType *ChanRefType) Name() string {
+	return refType.RefType.Name()
+}
+
+func (refType *ChanRefType) Pkg() *Package {
+	return refType.RefType.Pkg()
+}
+
+func (refType *ChanRefType) Type() Type {
+	return refType.RefType.Type()
+}
+
+func (refType *ChanRefType) AppendType(tp Type) {
+	refType.RefType.AppendType(tp)
+}
+
+type EllipsisRefType struct {
+	RefType
+}
+
+func NewEllipsisRefType(refType RefType) *EllipsisRefType {
+	return &EllipsisRefType{
+		RefType: refType,
+	}
+}
+
+func (refType *EllipsisRefType) Name() string {
+	return refType.RefType.Name()
+}
+
+func (refType *EllipsisRefType) Pkg() *Package {
+	return refType.RefType.Pkg()
+}
+
+func (refType *EllipsisRefType) Type() Type {
+	return refType.RefType.Type()
+}
+
+func (refType *EllipsisRefType) AppendType(tp Type) {
+	refType.RefType.AppendType(tp)
+}
+
+type MapType struct {
+	pkg   *Package
+	Key   RefType
+	Value RefType
+}
+
+func NewMap(pkg *Package, key RefType, value RefType) *MapType {
+	return &MapType{
+		Key:   key,
+		Value: value,
+	}
+}
+
+func (mt *MapType) Package() *Package {
+	return mt.pkg
+}
+
+func (mt *MapType) Name() string {
+	return fmt.Sprintf("map[%s]%s", mt.Key.Name(), mt.Value.Name())
+}
+
+func (mt *MapType) Methods() []*TypeMethod {
+	return nil
+}
+
+func (mt *MapType) AddMethod(method *TypeMethod) {}
+
+type Ellipsis struct {
+	pkg *Package
+	Elt RefType
+}
+
+func NewEllipsis(pkg *Package, elt RefType) *Ellipsis {
+	return &Ellipsis{
+		pkg: pkg,
+		Elt: elt,
+	}
+}
+
+func (el *Ellipsis) Package() *Package {
+	return el.pkg
+}
+
+func (el *Ellipsis) Name() string {
+	return ""
+}
+
+func (el *Ellipsis) Methods() []*TypeMethod {
+	return nil
+}
+
+func (el *Ellipsis) AddMethod(method *TypeMethod) {}
+
 type Type interface {
 	Package() *Package
 	Name() string
@@ -182,7 +357,6 @@ func (t *baseType) Methods() []*TypeMethod {
 
 func (t *baseType) AddMethod(method *TypeMethod) {
 	t.methods = append(t.methods, method)
-	// TODO(jota): Add map to improve future use.
 }
 
 type Struct struct {
@@ -294,17 +468,15 @@ func (p *Package) EnsureRefType(name string) (RefType, bool) {
 
 // RefTypeByName find RefType by name.
 func (p *Package) RefTypeByName(name string) (RefType, bool) {
-	// TODO(jota): Create a map for improve the performance of this.
-	for _, pp := range p.RefType {
-		if name == pp.Name() {
-			return pp, true
-		}
-	}
-	return nil, false
+	refType, ok := p.refTypeMap[name]
+	return refType, ok
 }
 
 func (p *Package) AddRefType(ref RefType) {
-	p.RefType = append(p.RefType, ref)
+	if ref.Name() != "" {
+		p.RefType = append(p.RefType, ref)
+		p.refTypeMap[ref.Name()] = ref
+	}
 }
 
 // AppendRefType add new RefType in Package.
@@ -313,8 +485,18 @@ func (p *Package) AppendRefType(name string) (ref RefType) {
 		pkg:  p,
 		name: name,
 	}
-	p.RefType = append(p.RefType, ref)
+	p.AddRefType(ref)
 	return ref
+}
+
+func (p *Package) AppendMethod(method *MethodDescriptor) {
+	p.Methods = append(p.Methods, method)
+	//p.methodMap[method.Name()] = method
+}
+
+func (p *Package) MethodByName(name string) (*MethodDescriptor, bool) {
+	m, ok := p.methodMap[name]
+	return m, ok
 }
 
 func (p *Package) VariableByName(name string) (vrle *Variable) {

@@ -3,7 +3,6 @@ package myasthurts
 import (
 	"fmt"
 	"go/ast"
-	"go/build"
 
 	"github.com/fatih/structtag"
 	"github.com/pkg/errors"
@@ -115,8 +114,7 @@ func parseSpec(ctx *parseFileContext, spec ast.Spec, docComments []string) error
 		// Tries to find the package on the list...
 		pkg, pkgExists := ctx.Env.PackageByImportPath(importPathPkg)
 
-		// TODO(jota): To parametrize the import source directory.
-		buildPackage, err := ctx.Env.BuildContext.Import(importPathPkg, ".", build.ImportComment)
+		buildPackage, err := ctx.Env.Import(importPathPkg)
 		if err != nil {
 			return err
 		}
@@ -233,7 +231,7 @@ func parseFuncDecl(ctx *parseFileContext, f *ast.FuncDecl) error {
 			Descriptor: method,
 		})
 	} else {
-		ctx.Package.Methods = append(ctx.Package.Methods, method) // TODO(jota): This might not be a package method.
+		ctx.Package.AppendMethod(method)
 	}
 
 	// Set the method documentation.
@@ -283,13 +281,11 @@ func parseType(ctx *parseFileContext, t ast.Expr) (RefType, error) {
 	case *ast.SelectorExpr:
 		pkgAliasIdent, ok := recvT.X.(*ast.Ident)
 		if !ok { // We expect the recvT.X is a ast.Ident, if not...
-			// TODO(jota): To formalize this error.
-			return nil, errors.New("unexpected selector identifier")
+			return nil, errors.Wrapf(ErrUnexpectedSelector, "%T", recvT.X)
 		}
 		pkgAlias, ok := ctx.PackageByImportAlias(pkgAliasIdent.Name)
 		if !ok { // The package does not exists in the ctx?? It should not be happening...
-			// TODO(jota): To formalize this error.
-			return nil, fmt.Errorf("package %s was not found", pkgAliasIdent.Name)
+			return nil, errors.Wrap(ErrPackageAliasNotFound, pkgAliasIdent.Name)
 		}
 		refType, _ := pkgAlias.EnsureRefType(recvT.Sel.Name) // We don't care if the refType is created now or not.
 		return refType, nil
@@ -298,26 +294,48 @@ func parseType(ctx *parseFileContext, t ast.Expr) (RefType, error) {
 	// This case covers pointers. It is recursive because pointers can be for
 	// identifiers or selectors...
 	case *ast.StarExpr:
-		// TODO(jota): To create a RefType that represents a pointer and wraps the result before returning.
-		return parseType(ctx, recvT.X)
-	case *ast.ArrayType:
-		// TODO(jota): To create a RefType that represents an array and wraps the result before returning.
-		return parseType(ctx, recvT.Elt)
+		refType, err := parseType(ctx, recvT.X)
+		if err != nil {
+			return nil, err
+		}
+		return NewStarRefType(refType), nil
+	case *ast.ArrayType: // TODO(Jeconias): Shall ArrayType be represented as a Type not a RefType?
+		refType, err := parseType(ctx, recvT.Elt)
+		if err != nil {
+			return nil, err
+		}
+		return NewArrayRefType(refType), nil
 	case *ast.MapType:
-		// TODO(jota): To create a RefType that represents a map and wraps the result before returning.
-		return parseType(ctx, recvT.Value)
-	case *ast.ChanType:
-		// TODO(jota): To create a RefType that represents a channel and wraps the result before returning.
-		return parseType(ctx, recvT.Value)
+
+		keyRefType, err := parseType(ctx, recvT.Key)
+		if err != nil {
+			return nil, err
+		}
+
+		valueRefType, err := parseType(ctx, recvT.Value)
+		if err != nil {
+			return nil, err
+		}
+
+		mType := NewMap(ctx.Package, keyRefType, valueRefType)
+		return NewRefType(mType.Name(), ctx.Package, mType), nil
+	case *ast.ChanType: // TODO(Jeconias): Shall ChanType be represented as a Type not a RefType?
+		refType, err := parseType(ctx, recvT.Value)
+		if err != nil {
+			return nil, err
+		}
+		return NewChanRefType(refType), nil
 	case *ast.FuncType:
 		return parseFuncType(ctx, recvT)
-	case *ast.Ellipsis:
-		// TODO(jota): To create a RefType that represents an Ellipsis and wraps the result before returning.
-		return parseType(ctx, recvT.Elt)
+	case *ast.Ellipsis: // TODO(Jeconias): Shall Ellipsis be represented as a Type not a RefType?
+		refType, err := parseType(ctx, recvT.Elt)
+		if err != nil {
+			return nil, err
+		}
+		return NewEllipsisRefType(refType), nil
 	// This is a safeguard for unexpected cases.
 	default:
-		// TODO(jota): To formalize this error.
-		return nil, fmt.Errorf("%T: unexpected expression type", t)
+		return nil, errors.Wrapf(ErrUnexpectedExpressionType, "%T", t)
 	}
 }
 
