@@ -24,7 +24,7 @@ type EnvConfig struct {
 // Field is utilized in Struct type in the present moment.
 type Field struct {
 	Name    string
-	RefType *RefType
+	RefType RefType
 	Tag     Tag
 	Doc     Doc
 }
@@ -51,7 +51,7 @@ type Interface struct {
 // MethodArgument represent type of fields and arguments.
 type MethodArgument struct {
 	Name string
-	Type *RefType
+	Type RefType
 }
 
 type MethodDescriptor struct {
@@ -80,7 +80,7 @@ type Package struct {
 	Methods     []*MethodDescriptor
 	Structs     []*Struct
 	Interfaces  []*Interface
-	RefType     []*RefType
+	RefType     []RefType
 	Types       []Type
 	Files       []*File
 	Parent      *Package
@@ -95,24 +95,93 @@ func NewPackage(buildPackage *build.Package) *Package {
 	}
 }
 
-type RefType struct {
-	Name string
-	Pkg  *Package
-	Type Type
+type RefType interface {
+	Name() string
+	Pkg() *Package
+	Type() Type
+	AppendType(t Type)
+}
+
+type BaseRefType struct {
+	name string
+	pkg  *Package
+	t    Type
+}
+
+func NewRefType(name string, pkg *Package, t Type) RefType {
+	return &BaseRefType{
+		name: name,
+		pkg:  pkg,
+		t:    t,
+	}
+}
+
+func (refType *BaseRefType) Name() string {
+	return refType.name
+}
+
+func (refType *BaseRefType) Pkg() *Package {
+	return refType.pkg
+}
+
+func (refType *BaseRefType) Type() Type {
+	return refType.t
+}
+
+// AppendType add Type in RefType
+func (rt *BaseRefType) AppendType(tp Type) {
+	rt.t = tp
+}
+
+type Type interface {
+	Package() *Package
+	Name() string
+	Methods() []*TypeMethod
+	AddMethod(*TypeMethod)
+}
+
+type baseType struct {
+	pkg     *Package
+	name    string
+	methods []*TypeMethod
+}
+
+// NewBaseType creates a new initialized baseType.
+func NewBaseType(pkg *Package, name string) *baseType {
+	return &baseType{
+		pkg:     pkg,
+		name:    name,
+		methods: make([]*TypeMethod, 0),
+	}
+}
+
+func (t *baseType) Package() *Package {
+	return t.pkg
+}
+
+func (t *baseType) Name() string {
+	return t.name
+}
+
+func (t *baseType) Methods() []*TypeMethod {
+	return t.methods
+}
+
+func (t *baseType) AddMethod(method *TypeMethod) {
+	t.methods = append(t.methods, method)
+	// TODO(jota): Add map to improve future use.
 }
 
 type Struct struct {
-	pkg        *Package
-	name       string
+	baseType
 	Doc        Doc
 	Fields     []*Field
-	Methods    []*StructMethod
 	Interfaces []*Interface
 }
 
-type StructMethod struct {
+type TypeMethod struct {
+	Name       string
 	Descriptor *MethodDescriptor
-	// TODO
 }
 
 type Tag struct {
@@ -126,14 +195,9 @@ type TagParam struct {
 	Options []string
 }
 
-type Type interface {
-	Package() *Package
-	Name() string
-}
-
 type Variable struct {
 	Name    string
-	RefType *RefType
+	RefType RefType
 }
 
 // FormatComment is simple method to remove // or /* */ of comment
@@ -202,20 +266,24 @@ func (p *Package) StructByName(name string) *Struct {
 }
 
 // RefTypeByName find RefType by name.
-func (p *Package) RefTypeByName(name string) (*RefType, bool) {
+func (p *Package) RefTypeByName(name string) (RefType, bool) {
 	for _, pp := range p.RefType {
-		if name == pp.Name {
+		if name == pp.Name() {
 			return pp, true
 		}
 	}
 	return nil, false
 }
 
+func (p *Package) AddRefType(ref RefType) {
+	p.RefType = append(p.RefType, ref)
+}
+
 // AppendRefType add new RefType in Package.
-func (p *Package) AppendRefType(name string) (ref *RefType) {
-	ref = &RefType{
-		Pkg:  p,
-		Name: name,
+func (p *Package) AppendRefType(name string) (ref RefType) {
+	ref = &BaseRefType{
+		pkg:  p,
+		name: name,
 	}
 	p.RefType = append(p.RefType, ref)
 	return ref
@@ -235,42 +303,14 @@ func (p *Package) AppendVariable(vrle *Variable) (v *Variable) {
 	return vrle
 }
 
-// NewRefType return new pointer RefType
-func NewRefType(pkg *Package) *RefType {
-	return &RefType{
-		Pkg: pkg,
-	}
-}
-
-// AppendType add Type in RefType
-func (rt *RefType) AppendType(tp Type) {
-
-	if rt.Type == nil {
-		switch t := tp.(type) {
-		case *Struct:
-			rt.Type = tp
-			var mDescriptor *StructMethod
-			for _, s := range t.Package().Methods {
-				if len(s.Recv) > 0 && s.Recv[0].Type != nil && s.Recv[0].Type.Name == t.Name() {
-					mDescriptor = &StructMethod{
-						Descriptor: s,
-					}
-					t.Methods = append(t.Methods, mDescriptor)
-				}
-			}
-		}
-	} else {
-		rt.Type = tp
-	}
-}
-
 // NewStruct return new pointer Struct
 func NewStruct(pkg *Package, name string) *Struct {
 	srct := &Struct{
-		pkg:  pkg,
-		name: name,
+		baseType: baseType{
+			pkg:  pkg,
+			name: name,
+		},
 	}
-	pkg.AppendStruct(srct)
 	return srct
 }
 

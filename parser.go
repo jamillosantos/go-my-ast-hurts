@@ -64,41 +64,48 @@ func parseGenDecl(ctx *parseFileContext, s *ast.GenDecl) error {
 }
 
 func parseSpec(ctx *parseFileContext, spec ast.Spec, docComments []string) error {
-	currentPackage := ctx.Package
-	var (
-		refType *RefType
-		err     error
-	)
-
 	switch s := spec.(type) {
 	case *ast.TypeSpec:
 		nameType := s.Name.Name
 		switch t := s.Type.(type) {
 		case *ast.StructType:
-			declStruct := NewStruct(currentPackage, s.Name.Name)
+			declStruct := NewStruct(ctx.Package, s.Name.Name)
 			declStruct.Doc = Doc{
 				Comments: docComments,
 			}
 
-			if refType, err = ctx.GetRefType(s.Name.Name); err != nil {
-				if refType = currentPackage.AppendRefType(s.Name.Name); refType == nil {
-					return errors.New("Append Reftype error")
+			// Get the refType from the package.
+			refType, ok := ctx.Package.RefTypeByName(s.Name.Name)
+			if ok {
+				// If the refType exists...
+				if refType.Type() != nil { // if the refType is already resolved
+					bt, ok := refType.Type().(*baseType)
+					if !ok { // That means a double declaration or some unexpected error...
+						return fmt.Errorf("type %t was not expected", refType.Type())
+					}
+					// Since it is a baseType, we should make it specific
+					// (struct) and use its already defined methods ...
+					declStruct.baseType = *bt
 				}
+				refType.AppendType(declStruct) // Realizes the refType
+			} else {
+				// If the ref type does not exists, creates and registers it.
+				refType = NewRefType(s.Name.Name, ctx.Package, declStruct)
+				ctx.Package.AddRefType(refType)
 			}
 
-			refType.AppendType(declStruct)
-
-			err = parseStruct(ctx, t, declStruct)
+			err := parseStruct(ctx, t, declStruct)
 			if err != nil {
 				return err
 			}
-			currentPackage.Types = append(currentPackage.Types, declStruct)
+			ctx.Package.Structs = append(ctx.Package.Structs, declStruct)
+			ctx.Package.Types = append(ctx.Package.Types, declStruct)
 		case *ast.Ident:
 			if ctx.File.Name.Name == "builtin" {
 				if nameType != t.Name {
-					currentPackage.AppendRefType(nameType)
+					ctx.Package.AppendRefType(nameType)
 				} else {
-					currentPackage.AppendRefType(t.Name)
+					ctx.Package.AppendRefType(t.Name)
 				}
 			}
 		}
@@ -138,9 +145,9 @@ func parseSpec(ctx *parseFileContext, spec ast.Spec, docComments []string) error
 			}
 		}
 	case *ast.ValueSpec:
-		if currentPackage.Name != "builtin" {
-			vrle := parseVariable(currentPackage, s)
-			currentPackage.AppendVariable(vrle)
+		if ctx.Package.Name != "builtin" {
+			vrle := parseVariable(ctx.Package, s)
+			ctx.Package.AppendVariable(vrle)
 		}
 	}
 	return nil
@@ -151,12 +158,13 @@ func parseStruct(ctx *parseFileContext, astStruct *ast.StructType, typeStruct *S
 
 	for _, field := range astStruct.Fields.List {
 		var (
-			refType *RefType
+			refType RefType
 			err     error
 		)
 
+		// TODO(jota): Add a default case returning an error.
 		switch t := field.Type.(type) {
-		case *ast.Ident:
+		case *ast.Ident: // this is a type like int64
 			if refType, err = ctx.GetRefType(t.Name); err != nil {
 				if refType = currentPackage.AppendRefType(t.Name); refType == nil {
 					return errors.New("Append Reftype error")
@@ -168,7 +176,9 @@ func parseStruct(ctx *parseFileContext, astStruct *ast.StructType, typeStruct *S
 					return errors.New("Append Reftype error")
 				}
 			}
-		case *ast.StarExpr:
+		case *ast.StarExpr: // This is a pointer declaration.
+			// TODO(jota): A new RefType type should be created to express pointers.
+			// TODO(jota): Add a default case returning an error.
 			switch xType := t.X.(type) { // TODO: Check this type
 			case *ast.Ident:
 				if refType, err = ctx.GetRefType(xType.Name); err != nil {
@@ -181,18 +191,17 @@ func parseStruct(ctx *parseFileContext, astStruct *ast.StructType, typeStruct *S
 
 		f := &Field{}
 		f.RefType = refType
-		f.Tag.Raw = ""
 		if field.Doc != nil {
-			var comments []string
-			if comments, err = parseComments(field.Doc); err != nil {
+			var docComments []string
+			if docComments, err = parseComments(field.Doc); err != nil {
 				return err
 			}
 			f.Doc = Doc{
-				Comments: comments,
+				Comments: docComments,
 			}
 		}
 
-		if len(field.Names) > 0 { // TODO(Jack): To check/understand multiple names.
+		if len(field.Names) > 0 {
 			f.Name = field.Names[0].Name
 		}
 
@@ -226,29 +235,40 @@ func parseStruct(ctx *parseFileContext, astStruct *ast.StructType, typeStruct *S
 }
 
 func parseFuncDecl(ctx *parseFileContext, f *ast.FuncDecl) (err error) {
-	currentPackage := ctx.Package
-	method := NewMethodDescriptor(currentPackage, f.Name.Name)
+	method := NewMethodDescriptor(ctx.Package, f.Name.Name)
+	hasReceiver := f.Recv != nil && len(f.Recv.List) > 0
+	if hasReceiver {
+		field := f.Recv.List[0]
 
-	if f.Recv != nil {
-		recvList := f.Recv.List
-		for _, field := range recvList {
-			recv := MethodArgument{}
-			typeName := ""
-			switch recvT := field.Type.(type) {
-			case *ast.StarExpr:
-				typeName = recvT.X.(*ast.Ident).Name
+		recv := MethodArgument{}
+		var refType RefType
+		switch recvT := field.Type.(type) {
+		case *ast.Ident:
+			// TODO(jota): To check for non pointer types.
+		case *ast.StarExpr:
+			typeName := recvT.X.(*ast.Ident).Name
+			rt, ok := ctx.Package.RefTypeByName(typeName)
+			if !ok {
+				rt = NewRefType(typeName, ctx.Package, NewBaseType(ctx.Package, typeName))
+				ctx.Package.AddRefType(rt)
 			}
-
-			recv.Name = field.Names[0].Name
-			if recv.Type, err = ctx.GetRefType(typeName); err != nil {
-				if recv.Type = currentPackage.AppendRefType(typeName); recv.Type == nil {
-					return errors.New("Append Reftype error")
-				}
-			}
-			method.Recv = append(method.Recv, recv)
+			refType = rt
 		}
+
+		recv.Name = field.Names[0].Name
+		recv.Type = refType
+		method.Recv = append(method.Recv, recv)
+
+		// Add method to the type...
+		refType.Type().AddMethod(&TypeMethod{
+			Name:       field.Names[0].Name,
+			Descriptor: method,
+		})
+	} else {
+		ctx.Package.Methods = append(ctx.Package.Methods, method) // TODO(jota): This might not be a package method.
 	}
 
+	// Set the method documentation.
 	if f.Doc != nil {
 		var comments []string
 		if comments, err = parseComments(f.Doc); err != nil {
@@ -268,7 +288,7 @@ func parseFuncDecl(ctx *parseFileContext, f *ast.FuncDecl) (err error) {
 		switch t := field.Type.(type) {
 		case *ast.Ident:
 			if argument.Type, err = ctx.GetRefType(t.Name); err != nil {
-				if argument.Type = currentPackage.AppendRefType(t.Name); argument.Type == nil {
+				if argument.Type = ctx.Package.AppendRefType(t.Name); argument.Type == nil {
 					return errors.New("Append Reftype error")
 				}
 			}
@@ -276,7 +296,7 @@ func parseFuncDecl(ctx *parseFileContext, f *ast.FuncDecl) (err error) {
 			switch xType := t.X.(type) {
 			case *ast.Ident:
 				if argument.Type, err = ctx.GetRefType(xType.Name); err != nil {
-					if argument.Type = currentPackage.AppendRefType(xType.Name); argument.Type == nil {
+					if argument.Type = ctx.Package.AppendRefType(xType.Name); argument.Type == nil {
 						return errors.New("Append Reftype error")
 					}
 				}
@@ -287,7 +307,6 @@ func parseFuncDecl(ctx *parseFileContext, f *ast.FuncDecl) (err error) {
 
 		method.Arguments = append(method.Arguments, argument)
 	}
-	currentPackage.Methods = append(currentPackage.Methods, method)
 	return nil
 }
 

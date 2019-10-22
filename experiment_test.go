@@ -98,11 +98,11 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(pkg.Structs[0].Fields[0].RefType).ToNot(Equal(BeNil()))
 			Expect(pkg.Structs[0].Fields[1].RefType).ToNot(Equal(BeNil()))
 
-			Expect(pkg.Structs[0].Fields[0].RefType.Name).To(Equal("int64"))
-			Expect(pkg.Structs[0].Fields[1].RefType.Name).To(Equal("string"))
+			Expect(pkg.Structs[0].Fields[0].RefType.Name()).To(Equal("int64"))
+			Expect(pkg.Structs[0].Fields[1].RefType.Name()).To(Equal("string"))
 
-			Expect(pkg.Structs[0].Fields[0].RefType.Type).To(BeNil())
-			Expect(pkg.Structs[0].Fields[1].RefType.Type).To(BeNil())
+			Expect(pkg.Structs[0].Fields[0].RefType.Type()).To(BeNil())
+			Expect(pkg.Structs[0].Fields[1].RefType.Type()).To(BeNil())
 
 			Expect(pkg.Structs[1].Fields[0].Name).To(Equal("ID"))
 			Expect(pkg.Structs[1].Fields[1].Name).To(Equal("Address"))
@@ -112,15 +112,15 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(pkg.Structs[1].Fields[1].RefType).ToNot(BeNil())
 			Expect(pkg.Structs[1].Fields[2].RefType).ToNot(BeNil())
 
-			Expect(pkg.Structs[1].Fields[0].RefType.Name).To(Equal("int64"))
-			Expect(pkg.Structs[1].Fields[1].RefType.Name).To(Equal("string"))
-			Expect(pkg.Structs[1].Fields[2].RefType.Name).To(Equal("User"))
-			Expect(pkg.Structs[1].Fields[3].RefType.Name).To(Equal("User"))
+			Expect(pkg.Structs[1].Fields[0].RefType.Name()).To(Equal("int64"))
+			Expect(pkg.Structs[1].Fields[1].RefType.Name()).To(Equal("string"))
+			Expect(pkg.Structs[1].Fields[2].RefType.Name()).To(Equal("User"))
+			Expect(pkg.Structs[1].Fields[3].RefType.Name()).To(Equal("User"))
 
-			Expect(pkg.Structs[1].Fields[0].RefType.Type).To(BeNil())
-			Expect(pkg.Structs[1].Fields[1].RefType.Type).To(BeNil())
-			Expect(pkg.Structs[1].Fields[2].RefType.Type).To(Equal(pkg.Structs[0]))
-			Expect(pkg.Structs[1].Fields[3].RefType.Type).To(Equal(pkg.Structs[0]))
+			Expect(pkg.Structs[1].Fields[0].RefType.Type()).To(BeNil())
+			Expect(pkg.Structs[1].Fields[1].RefType.Type()).To(BeNil())
+			Expect(pkg.Structs[1].Fields[2].RefType.Type()).To(Equal(pkg.Structs[0]))
+			Expect(pkg.Structs[1].Fields[3].RefType.Type()).To(Equal(pkg.Structs[0]))
 		})
 
 		It("should check struct tags", func() {
@@ -179,9 +179,9 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 			Expect(pkg.Structs).To(HaveLen(2))
 			Expect(pkg.Structs[0].Fields).To(HaveLen(2))
-			Expect(pkg.Structs[0].Fields[1].RefType.Name).To(Equal("User"))
-			Expect(pkg.Structs[0].Fields[1].RefType.Type).To(Equal(pkg.Structs[1]))
-			Expect(pkg.Structs[0].Fields[1].RefType.Pkg).To(Equal(pkg))
+			Expect(pkg.Structs[0].Fields[1].RefType.Name()).To(Equal("User"))
+			Expect(pkg.Structs[0].Fields[1].RefType.Type()).To(Equal(pkg.Structs[1]))
+			Expect(pkg.Structs[0].Fields[1].RefType.Pkg()).To(Equal(pkg))
 
 		})
 
@@ -288,7 +288,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(ref).To(Equal(g.RefType))
 
 			Expect(g.RefType.Type).ToNot(BeNil())
-			Expect(g.RefType.Type.Name()).To(Equal("User"))
+			Expect(g.RefType.Type().Name()).To(Equal("User"))
 
 			ref, ok = pkg.RefTypeByName("string")
 			Expect(ok).To(BeTrue())
@@ -368,27 +368,23 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(ok).To(BeTrue())
 			Expect(pkg.Name).To(Equal("models"))
 
-			Expect(pkg.Methods).To(HaveLen(3))
-			Expect(pkg.Methods[0].Name()).To(Equal("getName"))
-			Expect(pkg.Methods[0].Arguments).To(BeEmpty())
-			Expect(pkg.Methods[0].Recv).To(HaveLen(1))
+			Expect(pkg.Methods).To(HaveLen(2))
+			Expect(pkg.Methods[0].Name()).To(Equal("show"))
+			Expect(pkg.Methods[0].Arguments).To(HaveLen(2))
+			Expect(pkg.Methods[0].Recv).To(BeEmpty())
 
-			Expect(pkg.Methods[1].Name()).To(Equal("show"))
-			Expect(pkg.Methods[1].Arguments).To(HaveLen(2))
+			Expect(pkg.Methods[0].Arguments[0].Name).To(Equal("name"))
+			Expect(pkg.Methods[0].Arguments[1].Name).To(Equal("age"))
+
+			Expect(pkg.Methods[0].Arguments[0].Type.Type()).To(BeNil())
+			Expect(pkg.Methods[0].Arguments[1].Type.Type()).To(BeNil())
+
+			Expect(pkg.Methods[0].Arguments[0].Type.Name()).To(Equal("string"))
+			Expect(pkg.Methods[0].Arguments[1].Type.Name()).To(Equal("int64"))
+
+			Expect(pkg.Methods[1].Name()).To(Equal("welcome"))
+			Expect(pkg.Methods[1].Arguments).To(BeEmpty())
 			Expect(pkg.Methods[1].Recv).To(BeEmpty())
-
-			Expect(pkg.Methods[1].Arguments[0].Name).To(Equal("name"))
-			Expect(pkg.Methods[1].Arguments[1].Name).To(Equal("age"))
-
-			Expect(pkg.Methods[1].Arguments[0].Type.Type).To(BeNil())
-			Expect(pkg.Methods[1].Arguments[1].Type.Type).To(BeNil())
-
-			Expect(pkg.Methods[1].Arguments[0].Type.Name).To(Equal("string"))
-			Expect(pkg.Methods[1].Arguments[1].Type.Name).To(Equal("int64"))
-
-			Expect(pkg.Methods[2].Name()).To(Equal("welcome"))
-			Expect(pkg.Methods[2].Arguments).To(BeEmpty())
-			Expect(pkg.Methods[2].Recv).To(BeEmpty())
 
 		})
 
@@ -402,17 +398,15 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
 
-			Expect(pkg.Methods).To(HaveLen(2))
+			Expect(pkg.Methods).To(HaveLen(1))
+			Expect(pkg.Methods[0].Name()).To(Equal("getName_"))
 
 			Expect(pkg.Structs).To(HaveLen(1))
-			Expect(pkg.Structs[0].Methods).To(HaveLen(1))
-			Expect(pkg.Structs[0].Methods[0].Descriptor.Name()).To(Equal("getName"))
-			Expect(pkg.Structs[0].Methods[0].Descriptor.Arguments).To(BeEmpty())
-			Expect(pkg.Structs[0].Methods[0].Descriptor.Recv).To(HaveLen(1))
-			Expect(pkg.Structs[0].Methods[0].Descriptor.Recv[0].Type.Type).To(Equal(pkg.Structs[0]))
-
-			Expect(pkg.Methods[0].Name()).To(Equal("getName"))
-			Expect(pkg.Methods[1].Name()).To(Equal("getName_"))
+			Expect(pkg.Structs[0].Methods()).To(HaveLen(1))
+			Expect(pkg.Structs[0].Methods()[0].Descriptor.Name()).To(Equal("getName"))
+			Expect(pkg.Structs[0].Methods()[0].Descriptor.Arguments).To(BeEmpty())
+			Expect(pkg.Structs[0].Methods()[0].Descriptor.Recv).To(HaveLen(1))
+			Expect(pkg.Structs[0].Methods()[0].Descriptor.Recv[0].Type.Type()).To(Equal(pkg.Structs[0]))
 
 		})
 
@@ -426,9 +420,8 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
 
-			Expect(pkg.Methods).To(HaveLen(2))
+			Expect(pkg.Methods).To(HaveLen(1))
 			Expect(pkg.Methods[0].Package()).To(Equal(pkg))
-
 		})
 	})
 
@@ -480,11 +473,11 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			ref, ok := bytes.RefTypeByName("Buffer")
 			Expect(ok).To(BeTrue())
 			Expect(ref).ToNot(BeNil())
-			Expect(models.Methods[0].Arguments[0].Type.Name).To(Equal(ref.Type.Name()))
+			Expect(models.Methods[0].Arguments[0].Type.Name()).To(Equal(ref.Type().Name()))
 
 			stct := bytes.StructByName("Buffer")
 			Expect(stct).ToNot(BeNil())
-			Expect(fmt.Sprintf("%p", models.Methods[0].Arguments[0].Type.Type)).To(Equal(fmt.Sprintf("%p", stct)))
+			Expect(fmt.Sprintf("%p", models.Methods[0].Arguments[0].Type.Type())).To(Equal(fmt.Sprintf("%p", stct)))
 		})
 	})
 
@@ -557,14 +550,11 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(pkg.Doc.Comments).To(HaveLen(7))
 			Expect(pkg.Doc.Comments[0]).To(Equal("// Package models is a test"))
 
-			Expect(pkg.Methods).To(HaveLen(3))
+			Expect(pkg.Methods).To(HaveLen(2))
 			Expect(pkg.Methods[0].Doc.Comments).To(HaveLen(1))
-			Expect(pkg.Methods[0].Doc.Comments[0]).To(Equal("// Comment here"))
-			Expect(pkg.Methods[1].Doc.Comments).To(HaveLen(1))
-			Expect(pkg.Methods[1].Doc.Comments[0]).To(Equal("/** Description \n    multilines\n*/"))
-
+			Expect(pkg.Methods[0].Doc.Comments[0]).To(Equal("/** Description\n  multilines\n*/"))
+			Expect(pkg.Methods[1].Doc.Comments).To(BeEmpty())
 		})
-
 	})
 
 	When("parsing builtin file", func() {

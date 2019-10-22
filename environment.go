@@ -50,7 +50,7 @@ func (ctx *parseFileContext) PackageByImportAlias(name string) (*Package, bool) 
 
 // GetRefType will return a type defined on the context or in the dot imported
 // libraries. If no file exists, it will return an `ErrTypeNotFound`.
-func (ctx *parseFileContext) GetRefType(name string) (*RefType, error) {
+func (ctx *parseFileContext) GetRefType(name string) (RefType, error) {
 	// First, it tries to find the type on its own package.
 	if t, ok := ctx.Package.RefTypeByName(name); ok {
 		return t, nil
