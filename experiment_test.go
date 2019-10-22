@@ -265,34 +265,12 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			x := pkg.VariableByName("x")
 			Expect(x).To(BeNil())
 
-			ref, ok := pkg.RefTypeByName("string")
-			Expect(ok).To(BeTrue())
-			Expect(ref).To(Equal(a.RefType))
-			ref, ok = pkg.RefTypeByName("byte")
-			Expect(ok).To(BeTrue())
-			Expect(ref).To(Equal(b.RefType))
-			ref, ok = pkg.RefTypeByName("int")
-			Expect(ok).To(BeTrue())
-			Expect(ref).To(Equal(c.RefType))
-			ref, ok = pkg.RefTypeByName("int64")
-			Expect(ok).To(BeTrue())
-			Expect(ref).To(Equal(d.RefType))
-			ref, ok = pkg.RefTypeByName("float32")
-			Expect(ok).To(BeTrue())
-			Expect(ref).To(Equal(e.RefType))
-			ref, ok = pkg.RefTypeByName("bool")
-			Expect(ok).To(BeTrue())
-			Expect(ref).To(Equal(f.RefType))
-			ref, ok = pkg.RefTypeByName("User")
+			ref, ok := pkg.RefTypeByName("User")
 			Expect(ok).To(BeTrue())
 			Expect(ref).To(Equal(g.RefType))
 
 			Expect(g.RefType.Type).ToNot(BeNil())
 			Expect(g.RefType.Type().Name()).To(Equal("User"))
-
-			ref, ok = pkg.RefTypeByName("string")
-			Expect(ok).To(BeTrue())
-			Expect(ref).To(Equal(h.RefType))
 
 			/* Obs: At the moment it is not possible to identify if
 			 * 		the variable is array or no. (This is necessary?)
@@ -323,13 +301,6 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			b := pkg.VariableByName("OLM")
 			Expect(b).ToNot(BeNil())
 			Expect(b.RefType).ToNot(BeNil())
-
-			ref, ok := pkg.RefTypeByName("float")
-			Expect(ok).To(BeTrue())
-			Expect(ref).To(Equal(a.RefType))
-			ref, ok = pkg.RefTypeByName("string")
-			Expect(ok).To(BeTrue())
-			Expect(ref).To(Equal(b.RefType))
 		})
 
 		It("should check named types", func() {
@@ -456,7 +427,6 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(err).ToNot(HaveOccurred())
 
 			dataPkgCtx := newDataPackageContext(env)
-			env.AppendPackage(dataPkgCtx.Package)
 			Expect(env.parseFile(dataPkgCtx, "data/models12.sample.go")).To(Succeed())
 
 			models, ok := env.PackageByImportPath("data")

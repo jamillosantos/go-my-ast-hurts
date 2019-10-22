@@ -52,11 +52,11 @@ type Interface struct {
 type MethodArgument struct {
 	Name string
 	Type RefType
+	Doc  Doc
 }
 
 type MethodDescriptor struct {
-	pkg       *Package
-	name      string
+	baseType
 	Doc       Doc
 	Recv      []MethodArgument
 	Arguments []MethodArgument
@@ -92,6 +92,10 @@ func NewPackage(buildPackage *build.Package) *Package {
 		Name:       buildPackage.Name,
 		ImportPath: buildPackage.ImportPath,
 		RealPath:   buildPackage.Dir,
+		RefType: []RefType{
+			NullRefType,
+			InterfaceRefType,
+		},
 	}
 }
 
@@ -107,6 +111,15 @@ type BaseRefType struct {
 	pkg  *Package
 	t    Type
 }
+
+var (
+	NullRefType = &BaseRefType{
+		name: "nil",
+	}
+	InterfaceRefType = &BaseRefType{
+		name: "interface",
+	}
+)
 
 func NewRefType(name string, pkg *Package, t Type) RefType {
 	return &BaseRefType{
@@ -198,6 +211,7 @@ type TagParam struct {
 type Variable struct {
 	Name    string
 	RefType RefType
+	Doc     Doc
 }
 
 // FormatComment is simple method to remove // or /* */ of comment
@@ -235,8 +249,7 @@ func (i *Interface) Name() string {
 // NewMethodDescriptor return the pointer of new MethodDescriptor
 func NewMethodDescriptor(pkg *Package, name string) *MethodDescriptor {
 	return &MethodDescriptor{
-		pkg:  pkg,
-		name: name,
+		baseType: *NewBaseType(pkg, name),
 	}
 }
 
@@ -313,9 +326,9 @@ func (p *Package) VariableByName(name string) (vrle *Variable) {
 	return nil
 }
 
-func (p *Package) AppendVariable(vrle *Variable) (v *Variable) {
-	p.Variables = append(p.Variables, vrle)
-	return vrle
+func (p *Package) AppendVariable(variable *Variable) *Variable {
+	p.Variables = append(p.Variables, variable)
+	return variable
 }
 
 // NewStruct return new pointer Struct

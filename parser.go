@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/build"
-	"strings"
 
 	"github.com/fatih/structtag"
 	"github.com/pkg/errors"
@@ -143,12 +142,16 @@ func parseSpec(ctx *parseFileContext, spec ast.Spec, docComments []string) error
 				// Sets the alias of the package for this file context.
 				ctx.packageImportAliasMap[s.Name.Name] = pkg
 			}
+		} else {
+			// If it does not have any name defined, use the original package name.
+			ctx.packageImportAliasMap[buildPackage.Name] = pkg
 		}
 	case *ast.ValueSpec:
-		if ctx.Package.Name != "builtin" {
-			vrle := parseVariable(ctx.Package, s)
-			ctx.Package.AppendVariable(vrle)
+		variable, err := parseVariable(ctx, s)
+		if err != nil {
+			return err
 		}
+		ctx.Package.AppendVariable(variable)
 	}
 	return nil
 }
@@ -208,7 +211,7 @@ func parseStruct(ctx *parseFileContext, astStruct *ast.StructType, typeStruct *S
 	return nil
 }
 
-func parseFuncDecl(ctx *parseFileContext, f *ast.FuncDecl) (err error) {
+func parseFuncDecl(ctx *parseFileContext, f *ast.FuncDecl) error {
 	method := NewMethodDescriptor(ctx.Package, f.Name.Name)
 	hasReceiver := f.Recv != nil && len(f.Recv.List) > 0
 	if hasReceiver {
@@ -235,16 +238,14 @@ func parseFuncDecl(ctx *parseFileContext, f *ast.FuncDecl) (err error) {
 
 	// Set the method documentation.
 	if f.Doc != nil {
-		var comments []string
-		if comments, err = parseComments(f.Doc); err != nil {
+		docComments, err := parseComments(f.Doc)
+		if err != nil {
 			return err
 		}
 		method.Doc = Doc{
-			Comments: comments,
+			Comments: docComments,
 		}
 	}
-
-	var ok bool
 
 	for _, field := range f.Type.Params.List {
 		argument := MethodArgument{}
@@ -252,25 +253,12 @@ func parseFuncDecl(ctx *parseFileContext, f *ast.FuncDecl) (err error) {
 			argument.Name = field.Names[0].Name
 		}
 
-		switch t := field.Type.(type) {
-		case *ast.Ident:
-			if argument.Type, ok = ctx.GetRefType(t.Name); !ok {
-				if argument.Type = ctx.Package.AppendRefType(t.Name); argument.Type == nil {
-					return errors.New("Append Reftype error")
-				}
-			}
-		case *ast.StarExpr:
-			switch xType := t.X.(type) {
-			case *ast.Ident:
-				if argument.Type, ok = ctx.GetRefType(xType.Name); !ok {
-					if argument.Type = ctx.Package.AppendRefType(xType.Name); argument.Type == nil {
-						return errors.New("Append Reftype error")
-					}
-				}
-			case *ast.SelectorExpr:
-				fmt.Println(xType.X.(*ast.Ident).Name) // TODO: Check this type
-			}
+		refType, err := parseType(ctx, field.Type)
+		if err != nil {
+			return err
 		}
+
+		argument.Type = refType
 
 		method.Arguments = append(method.Arguments, argument)
 	}
@@ -305,6 +293,8 @@ func parseType(ctx *parseFileContext, t ast.Expr) (RefType, error) {
 		}
 		refType, _ := pkgAlias.EnsureRefType(recvT.Sel.Name) // We don't care if the refType is created now or not.
 		return refType, nil
+	case *ast.InterfaceType:
+		return InterfaceRefType, nil
 	// This case covers pointers. It is recursive because pointers can be for
 	// identifiers or selectors...
 	case *ast.StarExpr:
@@ -313,43 +303,85 @@ func parseType(ctx *parseFileContext, t ast.Expr) (RefType, error) {
 	case *ast.ArrayType:
 		// TODO(jota): To create a RefType that represents an array and wraps the result before returning.
 		return parseType(ctx, recvT.Elt)
+	case *ast.MapType:
+		// TODO(jota): To create a RefType that represents a map and wraps the result before returning.
+		return parseType(ctx, recvT.Value)
+	case *ast.ChanType:
+		// TODO(jota): To create a RefType that represents a channel and wraps the result before returning.
+		return parseType(ctx, recvT.Value)
+	case *ast.FuncType:
+		return parseFuncType(ctx, recvT)
+	case *ast.Ellipsis:
+		// TODO(jota): To create a RefType that represents an Ellipsis and wraps the result before returning.
+		return parseType(ctx, recvT.Elt)
 	// This is a safeguard for unexpected cases.
 	default:
+		// TODO(jota): To formalize this error.
 		return nil, fmt.Errorf("%T: unexpected expression type", t)
 	}
 }
 
-func parseVariable(parent *Package, f *ast.ValueSpec) (vrle *Variable) {
-	vrle = &Variable{
-		Name: f.Names[0].Name,
+func parseFuncType(ctx *parseFileContext, f *ast.FuncType) (RefType, error) {
+	md := &MethodDescriptor{
+		baseType: *NewBaseType(ctx.Package, ""),
 	}
 
-	switch t := f.Type.(type) {
-	case *ast.Ident:
-		if refType, ok := parent.RefTypeByName(t.Name); ok {
-			vrle.RefType = refType
-			return
+	for _, p := range f.Params.List {
+		refType, err := parseType(ctx, p.Type)
+		if err != nil {
+			return nil, err
 		}
-		variable.RefType = parent.AppendRefType(t.Name)
-	case *ast.ArrayType:
-		n := t.Elt.(*ast.Ident).Name
-		if refType, ok := parent.RefTypeByName(n); ok {
-			vrle.RefType = refType
-			return
-		}
-	}
 
-	for _, value := range f.Values {
-		switch v := value.(type) {
-		case *ast.BasicLit:
-			typeName := strings.ToLower(v.Kind.String())
-			if refType, ok := parent.RefTypeByName(typeName); ok {
-				vrle.RefType = refType
-				return
+		methodArg := MethodArgument{
+			Type: refType,
+		}
+
+		if p.Names != nil {
+			methodArg.Name = p.Names[0].Name
+		}
+
+		if p.Doc != nil {
+			docComments, err := parseComments(p.Doc)
+			if err != nil {
+				return nil, err
 			}
-			variable.RefType = parent.AppendRefType(typeName)
+			methodArg.Doc = Doc{
+				Comments: docComments,
+			}
+		}
+
+		md.Arguments = append(md.Arguments, methodArg)
+	}
+
+	return NewRefType("", ctx.Package, md), nil
+}
+
+func parseVariable(ctx *parseFileContext, vValue *ast.ValueSpec) (*Variable, error) {
+	variable := &Variable{
+		Name: vValue.Names[0].Name,
+	}
+
+	// Defines the variable documentation...
+	if vValue.Doc != nil {
+		docComments, err := parseComments(vValue.Doc)
+		if err != nil {
+			return nil, err
+		}
+		variable.Doc = Doc{
+			Comments: docComments,
 		}
 	}
 
-	return variable
+	if vValue.Type == nil {
+		variable.RefType = NullRefType
+	} else {
+		// Define and set the RefType of the variable.
+		refType, err := parseType(ctx, vValue.Type)
+		if err != nil {
+			return nil, err
+		}
+		variable.RefType = refType
+	}
+
+	return variable, nil
 }

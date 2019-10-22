@@ -174,15 +174,18 @@ func (env *environment) parseFile(pkgCtx *parsePackageContext, filePath string) 
 		return err
 	}
 
+	dotImports := make([]*Package, 0, 1)
+	if env.BuiltIn != nil {
+		// Adds the built in as a default dot imported package. If it is defined.
+		dotImports = append(dotImports, env.BuiltIn)
+	} // If it is not defined, it means we are parsing the builtin package.
+
 	// Create the context of the file parse.
 	fileCtx := &parseFileContext{
-		File:    file,
-		Env:     env,
-		Package: pkgCtx.Package,
-		dotImports: []*Package{
-			// Adds the built in as a default dot imported package.
-			env.BuiltIn,
-		},
+		File:                  file,
+		Env:                   env,
+		Package:               pkgCtx.Package,
+		dotImports:            dotImports,
 		packageImportAliasMap: make(map[string]*Package),
 	}
 
