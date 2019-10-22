@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"strings"
 
 	"github.com/fatih/structtag"
 )
@@ -40,7 +41,9 @@ func (env *environment) makeEnv() (exrr error) {
 		return exrr
 	}
 	builtinPath := fmt.Sprintf("%s/builtin", path)
-	env.ParsePackage(builtinPath, false)
+	if exrr = env.ParsePackage(builtinPath, false); exrr != nil {
+		return exrr
+	}
 	return
 }
 
@@ -111,10 +114,6 @@ func parseFileName(ctx *parseContext) (exrr error) {
 }
 
 func parseComments(doc *ast.CommentGroup) (r []string, exrr error) {
-	if doc.List == nil {
-		return nil, errors.New("Doc list empty")
-	}
-
 	sizeList := len(doc.List)
 
 	t := make([]string, sizeList)
@@ -154,8 +153,8 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) (exrr error)
 			}
 
 			if refType, exrr = ctx.GetRefType(s.Name.Name); exrr != nil {
-				if refType, exrr = currentPackage.AppendRefType(s.Name.Name); exrr != nil {
-					return exrr
+				if refType = currentPackage.AppendRefType(s.Name.Name); refType == nil {
+					return errors.New("Append Reftype error")
 				}
 			}
 
@@ -203,8 +202,8 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) (exrr error)
 			}
 
 			if refType, exrr = ctx.GetRefType(s.Name.Name); exrr != nil {
-				if refType, exrr = currentPackage.AppendRefType(s.Name.Name); exrr != nil {
-					return exrr
+				if refType = currentPackage.AppendRefType(s.Name.Name); refType == nil {
+					return errors.New("Append Reftype error")
 				}
 			}
 		} else {
@@ -220,13 +219,16 @@ func parseSpec(ctx *parseContext, spec ast.Spec, comments []string) (exrr error)
 				}
 			}
 			if refType, exrr = ctx.GetRefType(namePkg); exrr != nil {
-				if refType, exrr = currentPackage.AppendRefType(namePkg); exrr != nil {
-					return exrr
+				if refType = currentPackage.AppendRefType(namePkg); refType == nil {
+					return errors.New("Append Reftype error")
 				}
 			}
 		}
 	case *ast.ValueSpec:
-		//parseVariable(currentPackage, s)
+		if currentPackage.Name != "builtin" {
+			vrle := parseVariable(currentPackage, s)
+			currentPackage.AppendVariable(vrle)
+		}
 	}
 	return
 }
@@ -244,22 +246,22 @@ func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struc
 		switch t := field.Type.(type) {
 		case *ast.Ident:
 			if refType, exrr = ctx.GetRefType(t.Name); exrr != nil {
-				if refType, exrr = currentPackage.AppendRefType(t.Name); exrr != nil {
-					return exrr
+				if refType = currentPackage.AppendRefType(t.Name); refType == nil {
+					return errors.New("Append Reftype error")
 				}
 			}
 		case *ast.SelectorExpr:
 			if refType, exrr = ctx.GetRefType(t.X.(*ast.Ident).Name); exrr != nil {
-				if refType, exrr = currentPackage.AppendRefType(t.X.(*ast.Ident).Name); exrr != nil {
-					return exrr
+				if refType = currentPackage.AppendRefType(t.X.(*ast.Ident).Name); refType == nil {
+					return errors.New("Append Reftype error")
 				}
 			}
 		case *ast.StarExpr:
 			switch xType := t.X.(type) { // TODO: Check this type
 			case *ast.Ident:
 				if refType, exrr = ctx.GetRefType(xType.Name); exrr != nil {
-					if refType, exrr = currentPackage.AppendRefType(xType.Name); exrr != nil {
-						return exrr
+					if refType = currentPackage.AppendRefType(xType.Name); refType == nil {
+						return errors.New("Append Reftype error")
 					}
 				}
 			}
@@ -287,8 +289,7 @@ func parseStruct(ctx *parseContext, astStruct *ast.StructType, typeStruct *Struc
 
 			structTag, err := structtag.Parse(f.Tag.Raw)
 			if err != nil {
-				fmt.Println("Error in format StructTag.")
-				panic(err)
+				return err
 			}
 
 			for _, tag := range structTag.Tags() {
@@ -316,7 +317,7 @@ func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) (exrr error) {
 	currentPackage := ctx.PackagesMap[ctx.File.Name.Name]
 	method := NewMethodDescriptor(currentPackage, f.Name.Name)
 
-	if f.Recv != nil { //TODO(check): I don't know if this pointers always will exist if "f.Recv" is diff than nil.
+	if f.Recv != nil {
 		recvList := f.Recv.List
 		for _, field := range recvList {
 			recv := MethodArgument{}
@@ -328,8 +329,8 @@ func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) (exrr error) {
 
 			recv.Name = field.Names[0].Name
 			if recv.Type, exrr = ctx.GetRefType(typeName); exrr != nil {
-				if recv.Type, exrr = currentPackage.AppendRefType(typeName); exrr != nil {
-					return exrr
+				if recv.Type = currentPackage.AppendRefType(typeName); recv.Type == nil {
+					return errors.New("Append Reftype error")
 				}
 			}
 			method.Recv = append(method.Recv, recv)
@@ -355,16 +356,16 @@ func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) (exrr error) {
 		switch t := field.Type.(type) {
 		case *ast.Ident:
 			if argument.Type, exrr = ctx.GetRefType(t.Name); exrr != nil {
-				if argument.Type, exrr = currentPackage.AppendRefType(t.Name); exrr != nil {
-					return exrr
+				if argument.Type = currentPackage.AppendRefType(t.Name); argument.Type == nil {
+					return errors.New("Append Reftype error")
 				}
 			}
 		case *ast.StarExpr:
 			switch xType := t.X.(type) {
 			case *ast.Ident:
 				if argument.Type, exrr = ctx.GetRefType(xType.Name); exrr != nil {
-					if argument.Type, exrr = currentPackage.AppendRefType(xType.Name); exrr != nil {
-						return exrr
+					if argument.Type = currentPackage.AppendRefType(xType.Name); argument.Type == nil {
+						return errors.New("Append Reftype error")
 					}
 				}
 			case *ast.SelectorExpr:
@@ -378,25 +379,43 @@ func parseFuncDecl(ctx *parseContext, f *ast.FuncDecl) (exrr error) {
 	return nil
 }
 
-func parseVariable(parent *Package, f *ast.ValueSpec) {
-	variable := &Variable{}
-	varType := NewRefType(parent)
+func parseVariable(parent *Package, f *ast.ValueSpec) (vrle *Variable) {
+	var (
+		refType *RefType
+	)
+	variable := &Variable{
+		Name: f.Names[0].Name,
+	}
 
-	variable.Name = f.Names[0].Name
-
-	if f.Names == nil {
-		varType.Name = f.Type.(*ast.Ident).Name
-		variable.Type = varType
-	} else {
-		for _, value := range f.Values {
-			switch v := value.(type) {
-			case *ast.BasicLit:
-				//varType.Name = TODO: Set values
-				fmt.Printf("%T\n", v.Kind) //TODO: Convert token.token to string
-			case *ast.Ident:
-				//varType.Name = TODO: Set values
-				fmt.Printf("%T\n", v.Name)
-			}
+	switch t := f.Type.(type) {
+	case *ast.Ident:
+		refType = parent.RefTypeByName(t.Name)
+		if refType != nil {
+			variable.RefType = refType
+			return
+		}
+		variable.RefType = parent.AppendRefType(t.Name)
+	case *ast.ArrayType:
+		n := t.Elt.(*ast.Ident).Name
+		refType = parent.RefTypeByName(n)
+		if refType != nil {
+			variable.RefType = refType
+			//I don't know why the "return" causes error here
 		}
 	}
+
+	for _, value := range f.Values {
+		switch v := value.(type) {
+		case *ast.BasicLit:
+			typeName := strings.ToLower(v.Kind.String())
+			refType = parent.RefTypeByName(typeName)
+			if refType != nil {
+				variable.RefType = refType
+				return
+			}
+			variable.RefType = parent.AppendRefType(typeName)
+		}
+	}
+
+	return variable
 }

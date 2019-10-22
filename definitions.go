@@ -138,8 +138,8 @@ type Type interface {
 }
 
 type Variable struct {
-	Name string
-	Type *RefType
+	Name    string
+	RefType *RefType
 }
 
 // FormatComment is simple method to remove // or /* */ of comment
@@ -279,13 +279,27 @@ func (p *Package) RefTypeByName(name string) (ref *RefType) {
 }
 
 // AppendRefType add new RefType in Package.
-func (p *Package) AppendRefType(name string) (ref *RefType, exrr error) {
+func (p *Package) AppendRefType(name string) (ref *RefType) {
 	ref = &RefType{
 		Pkg:  p,
 		Name: name,
 	}
 	p.RefType = append(p.RefType, ref)
-	return ref, nil
+	return ref
+}
+
+func (p *Package) VariableByName(name string) (vrle *Variable) {
+	for _, v := range p.Variables {
+		if v.Name == name {
+			return v
+		}
+	}
+	return nil
+}
+
+func (p *Package) AppendVariable(vrle *Variable) (v *Variable) {
+	p.Variables = append(p.Variables, vrle)
+	return vrle
 }
 
 // NewRefType return new pointer RefType
@@ -338,7 +352,7 @@ func (s *Struct) Name() string {
 }
 
 // FormatComments show struct with all comments
-func (s *Struct) FormatComments() string {
+/*func (s *Struct) FormatComments() string {
 	str := fmt.Sprintf("%s\ntype %s struct {\n", s.Doc.FormatComment(), s.Name())
 	for _, f := range s.Fields {
 		c := f.Doc.FormatComment()
@@ -349,7 +363,7 @@ func (s *Struct) FormatComments() string {
 		str += fmt.Sprintf("%s%s%s %s %s\n", c, brk, f.Name, f.RefType.Name, f.Tag.Raw)
 	}
 	return fmt.Sprintf("%s}", str)
-}
+}*/
 
 // AppendTagParam add new TagParam in Tag
 func (t *Tag) AppendTagParam(tNew *TagParam) bool {
