@@ -1,4 +1,4 @@
-module github.com/jamillosantos/go-my-ast-hurts
+module github.com/lab259/go-my-ast-hurts
 
 go 1.12
 
