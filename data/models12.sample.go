@@ -6,7 +6,7 @@ import (
 )
 
 func welcome(buf *Buffer) {
-	if b, exrr := buf.ReadByte(); exrr != nil {
+	if b, err := buf.ReadByte(); err != nil {
 		fmt.Println(b)
 	}
 }

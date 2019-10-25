@@ -3,74 +3,72 @@ package myasthurts
 import (
 	//myasthurts "github.com/lab259/go-my-ast-hurts"
 
-	"os"
+	"fmt"
+	"go/build"
+	"path"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
+func newDataPackageContext(env *environment) *parsePackageContext {
+	buildPkg := &build.Package{
+		Dir:        "data",
+		Name:       "models",
+		ImportPath: "data",
+	}
+	pkg := NewPackage(buildPkg)
+	env.AppendPackage(pkg)
+	return NewPackageContext(pkg, buildPkg)
+}
+
 var _ = Describe("My AST Hurts - Parse simples files with tags and func from struct", func() {
 
-	When("parsing file", func() {
+	Context("Initialization", func() {
 
 		var (
-			GOROOT string
+			originalGOROOT string
 		)
 
 		BeforeSuite(func() {
-			GOROOT = os.Getenv("GOROOT")
+			originalGOROOT = build.Default.GOROOT
 		})
 
 		JustAfterEach(func() {
-			os.Setenv("GOROOT", GOROOT)
+			build.Default.GOROOT = originalGOROOT
 		})
 
 		It("should show error if GOROOT not exist", func() {
-			path := os.Getenv("GOROOT")
-			Expect(path).ToNot(BeEmpty())
+			Expect(build.Default.GOROOT).ToNot(BeEmpty())
 
-			exrr := os.Setenv("GOROOT", "")
-			Expect(exrr).ShouldNot(HaveOccurred())
+			build.Default.GOROOT = path.Join("not", "existing", "path")
 
-			_, exrr = NewEnvironment()
-			Expect(exrr).To(HaveOccurred())
-			Expect("GOROOT environment variable not found or is empty").To(Equal(exrr.Error()))
-		})
-
-		It("should show error if GOROOT has incorrect value", func() {
-			path := os.Getenv("GOROOT")
-			Expect(path).ToNot(BeEmpty())
-
-			exrr := os.Setenv("GOROOT", "any")
-			Expect(exrr).ShouldNot(HaveOccurred())
-
-			_, exrr = NewEnvironment()
-			Expect(exrr).To(HaveOccurred())
-			Expect("open any/src/builtin: no such file or directory").To(Equal(exrr.Error()))
+			_, err := NewEnvironment()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(HavePrefix("go/build"))
+			Expect(err.Error()).To(ContainSubstring("cannot find GOROOT directory"))
 		})
 
 		It("should show error if file not found", func() {
-			env, exrr := NewEnvironment()
-			Expect(exrr).To(BeNil())
+			env, err := NewEnvironment()
+			Expect(err).ToNot(HaveOccurred())
 
-			exrr = env.ParsePackage("data/models259.sample.go", true)
-			Expect(exrr).Should(HaveOccurred())
-
-			Expect("File not found").To(Equal(exrr.Error()))
+			err = env.parseFile(newDataPackageContext(env), "data/models259.sample.go")
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("no such file or directory"))
 		})
 
 	})
 
 	When("parsing struct", func() {
-
 		It("should check two struct in file and if anyName struct no exist", func() {
-			env, exrr := NewEnvironment()
-			Expect(exrr).To(BeNil())
+			env, err := NewEnvironment()
+			Expect(err).ToNot(HaveOccurred())
 
-			exrr = env.ParsePackage("data/models1.sample.go", true)
-			Expect(exrr).To(BeNil())
+			err = env.parseFile(newDataPackageContext(env), "data/models1.sample.go")
+			Expect(err).ToNot(HaveOccurred())
 
-			pkg, ok := env.PackageByName("models")
+			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
 
 			Expect(pkg).NotTo(BeNil())
@@ -80,13 +78,13 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 		})
 
 		It("should check struct fields", func() {
-			env, exrr := NewEnvironment()
-			Expect(exrr).To(BeNil())
+			env, err := NewEnvironment()
+			Expect(err).ToNot(HaveOccurred())
 
-			exrr = env.ParsePackage("data/models2.sample.go", true)
-			Expect(exrr).To(BeNil())
+			err = env.parseFile(newDataPackageContext(env), "data/models2.sample.go")
+			Expect(err).ToNot(HaveOccurred())
 
-			pkg, ok := env.PackageByName("models")
+			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
 			Expect(pkg).NotTo(BeNil())
 
@@ -100,11 +98,11 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(pkg.Structs[0].Fields[0].RefType).ToNot(Equal(BeNil()))
 			Expect(pkg.Structs[0].Fields[1].RefType).ToNot(Equal(BeNil()))
 
-			Expect(pkg.Structs[0].Fields[0].RefType.Name).To(Equal("int64"))
-			Expect(pkg.Structs[0].Fields[1].RefType.Name).To(Equal("string"))
+			Expect(pkg.Structs[0].Fields[0].RefType.Name()).To(Equal("int64"))
+			Expect(pkg.Structs[0].Fields[1].RefType.Name()).To(Equal("string"))
 
-			Expect(pkg.Structs[0].Fields[0].RefType.Type).To(BeNil())
-			Expect(pkg.Structs[0].Fields[1].RefType.Type).To(BeNil())
+			Expect(pkg.Structs[0].Fields[0].RefType.Type()).To(BeNil())
+			Expect(pkg.Structs[0].Fields[1].RefType.Type()).To(BeNil())
 
 			Expect(pkg.Structs[1].Fields[0].Name).To(Equal("ID"))
 			Expect(pkg.Structs[1].Fields[1].Name).To(Equal("Address"))
@@ -114,25 +112,25 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(pkg.Structs[1].Fields[1].RefType).ToNot(BeNil())
 			Expect(pkg.Structs[1].Fields[2].RefType).ToNot(BeNil())
 
-			Expect(pkg.Structs[1].Fields[0].RefType.Name).To(Equal("int64"))
-			Expect(pkg.Structs[1].Fields[1].RefType.Name).To(Equal("string"))
-			Expect(pkg.Structs[1].Fields[2].RefType.Name).To(Equal("User"))
-			Expect(pkg.Structs[1].Fields[3].RefType.Name).To(Equal("User"))
+			Expect(pkg.Structs[1].Fields[0].RefType.Name()).To(Equal("int64"))
+			Expect(pkg.Structs[1].Fields[1].RefType.Name()).To(Equal("string"))
+			Expect(pkg.Structs[1].Fields[2].RefType.Name()).To(Equal("User"))
+			Expect(pkg.Structs[1].Fields[3].RefType.Name()).To(Equal("User"))
 
-			Expect(pkg.Structs[1].Fields[0].RefType.Type).To(BeNil())
-			Expect(pkg.Structs[1].Fields[1].RefType.Type).To(BeNil())
-			Expect(pkg.Structs[1].Fields[2].RefType.Type).To(Equal(pkg.Structs[0]))
-			Expect(pkg.Structs[1].Fields[3].RefType.Type).To(Equal(pkg.Structs[0]))
+			Expect(pkg.Structs[1].Fields[0].RefType.Type()).To(BeNil())
+			Expect(pkg.Structs[1].Fields[1].RefType.Type()).To(BeNil())
+			Expect(pkg.Structs[1].Fields[2].RefType.Type()).To(Equal(pkg.Structs[0]))
+			Expect(pkg.Structs[1].Fields[3].RefType.Type()).To(Equal(pkg.Structs[0]))
 		})
 
 		It("should check struct tags", func() {
-			env, exrr := NewEnvironment()
-			Expect(exrr).To(BeNil())
+			env, err := NewEnvironment()
+			Expect(err).To(BeNil())
 
-			exrr = env.ParsePackage("data/models3.sample.go", true)
-			Expect(exrr).To(BeNil())
+			err = env.parseFile(newDataPackageContext(env), "data/models3.sample.go")
+			Expect(err).To(BeNil())
 
-			pkg, ok := env.PackageByName("models")
+			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
 			Expect(pkg).NotTo(BeNil())
 
@@ -172,18 +170,18 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models4.sample.go", true)
+			exrr = env.parseFile(newDataPackageContext(env), "data/models4.sample.go")
 			Expect(exrr).To(BeNil())
 
-			pkg, ok := env.PackageByName("models")
+			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
 			Expect(pkg).NotTo(BeNil())
 
 			Expect(pkg.Structs).To(HaveLen(2))
 			Expect(pkg.Structs[0].Fields).To(HaveLen(2))
-			Expect(pkg.Structs[0].Fields[1].RefType.Name).To(Equal("User"))
-			Expect(pkg.Structs[0].Fields[1].RefType.Type).To(Equal(pkg.Structs[1]))
-			Expect(pkg.Structs[0].Fields[1].RefType.Pkg).To(Equal(pkg))
+			Expect(pkg.Structs[0].Fields[1].RefType.Name()).To(Equal("User"))
+			Expect(pkg.Structs[0].Fields[1].RefType.Type()).To(Equal(pkg.Structs[1]))
+			Expect(pkg.Structs[0].Fields[1].RefType.Pkg()).To(Equal(pkg))
 
 		})
 
@@ -191,10 +189,10 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models5.sample.go", true)
+			exrr = env.parseFile(newDataPackageContext(env), "data/models5.sample.go")
 			Expect(exrr).To(BeNil())
 
-			pkg, ok := env.PackageByName("models")
+			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
 			Expect(pkg).NotTo(BeNil())
 
@@ -222,12 +220,12 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 				ASTI:    false,
 			}
 
-			exrr = env.ParsePackage("data/models11.sample.go", true)
-			builtin, _ := env.PackageByName("builtin")
+			exrr = env.parseFile(newDataPackageContext(env), "data/models11.sample.go")
+			builtin, _ := env.PackageByImportPath("builtin")
 			Expect(builtin).ToNot(BeNil())
 			Expect(exrr).To(BeNil())
 
-			pkg, ok := env.PackageByName("models")
+			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
 
 			Expect(pkg.Variables).To(HaveLen(8))
@@ -267,17 +265,12 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			x := pkg.VariableByName("x")
 			Expect(x).To(BeNil())
 
-			Expect(pkg.RefTypeByName("string")).To(Equal(a.RefType))
-			Expect(pkg.RefTypeByName("byte")).To(Equal(b.RefType))
-			Expect(pkg.RefTypeByName("int")).To(Equal(c.RefType))
-			Expect(pkg.RefTypeByName("int64")).To(Equal(d.RefType))
-			Expect(pkg.RefTypeByName("float32")).To(Equal(e.RefType))
-			Expect(pkg.RefTypeByName("boolean")).To(Equal(f.RefType))
-			Expect(pkg.RefTypeByName("User")).To(Equal(g.RefType))
-			Expect(g.RefType.Type).ToNot(BeNil())
-			Expect(g.RefType.Type.Name()).To(Equal("User"))
+			ref, ok := pkg.RefTypeByName("User")
+			Expect(ok).To(BeTrue())
+			Expect(ref).To(Equal(g.RefType))
 
-			Expect(pkg.RefTypeByName("string")).To(Equal(h.RefType))
+			Expect(g.RefType.Type).ToNot(BeNil())
+			Expect(g.RefType.Type().Name()).To(Equal("User"))
 
 			/* Obs: At the moment it is not possible to identify if
 			 * 		the variable is array or no. (This is necessary?)
@@ -293,12 +286,12 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 				ASTI:    false,
 			}
 
-			exrr = env.ParsePackage("data/models15.sample.go", true)
-			builtin, _ := env.PackageByName("builtin")
+			exrr = env.parseFile(newDataPackageContext(env), "data/models15.sample.go")
+			builtin, _ := env.PackageByImportPath("builtin")
 			Expect(builtin).ToNot(BeNil())
 			Expect(exrr).To(BeNil())
 
-			pkg, ok := env.PackageByName("models")
+			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
 
 			a := pkg.VariableByName("PI")
@@ -308,11 +301,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			b := pkg.VariableByName("OLM")
 			Expect(b).ToNot(BeNil())
 			Expect(b.RefType).ToNot(BeNil())
-
-			Expect(pkg.RefTypeByName("float")).To(Equal(a.RefType))
-			Expect(pkg.RefTypeByName("string")).To(Equal(b.RefType))
 		})
-
 	})
 
 	When("parsing function", func() {
@@ -322,34 +311,30 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models6.sample.go", true)
+			exrr = env.parseFile(newDataPackageContext(env), "data/models6.sample.go")
 			Expect(exrr).To(BeNil())
 
-			pkg, ok := env.PackageByName("models")
+			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
 			Expect(pkg.Name).To(Equal("models"))
 
-			Expect(pkg.Methods).To(HaveLen(3))
-			Expect(pkg.Methods[0].Name()).To(Equal("getName"))
-			Expect(pkg.Methods[0].Arguments).To(BeEmpty())
-			Expect(pkg.Methods[0].Recv).To(HaveLen(1))
+			Expect(pkg.Methods).To(HaveLen(2))
+			Expect(pkg.Methods[0].Name()).To(Equal("show"))
+			Expect(pkg.Methods[0].Arguments).To(HaveLen(2))
+			Expect(pkg.Methods[0].Recv).To(BeEmpty())
 
-			Expect(pkg.Methods[1].Name()).To(Equal("show"))
-			Expect(pkg.Methods[1].Arguments).To(HaveLen(2))
+			Expect(pkg.Methods[0].Arguments[0].Name).To(Equal("name"))
+			Expect(pkg.Methods[0].Arguments[1].Name).To(Equal("age"))
+
+			Expect(pkg.Methods[0].Arguments[0].Type.Type()).To(BeNil())
+			Expect(pkg.Methods[0].Arguments[1].Type.Type()).To(BeNil())
+
+			Expect(pkg.Methods[0].Arguments[0].Type.Name()).To(Equal("string"))
+			Expect(pkg.Methods[0].Arguments[1].Type.Name()).To(Equal("int64"))
+
+			Expect(pkg.Methods[1].Name()).To(Equal("welcome"))
+			Expect(pkg.Methods[1].Arguments).To(BeEmpty())
 			Expect(pkg.Methods[1].Recv).To(BeEmpty())
-
-			Expect(pkg.Methods[1].Arguments[0].Name).To(Equal("name"))
-			Expect(pkg.Methods[1].Arguments[1].Name).To(Equal("age"))
-
-			Expect(pkg.Methods[1].Arguments[0].Type.Type).To(BeNil())
-			Expect(pkg.Methods[1].Arguments[1].Type.Type).To(BeNil())
-
-			Expect(pkg.Methods[1].Arguments[0].Type.Name).To(Equal("string"))
-			Expect(pkg.Methods[1].Arguments[1].Type.Name).To(Equal("int64"))
-
-			Expect(pkg.Methods[2].Name()).To(Equal("welcome"))
-			Expect(pkg.Methods[2].Arguments).To(BeEmpty())
-			Expect(pkg.Methods[2].Recv).To(BeEmpty())
 
 		})
 
@@ -357,23 +342,21 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models7.sample.go", true)
+			exrr = env.parseFile(newDataPackageContext(env), "data/models7.sample.go")
 			Expect(exrr).To(BeNil())
 
-			pkg, ok := env.PackageByName("models")
+			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
 
-			Expect(pkg.Methods).To(HaveLen(2))
+			Expect(pkg.Methods).To(HaveLen(1))
+			Expect(pkg.Methods[0].Name()).To(Equal("getName_"))
 
 			Expect(pkg.Structs).To(HaveLen(1))
-			Expect(pkg.Structs[0].Methods).To(HaveLen(1))
-			Expect(pkg.Structs[0].Methods[0].Descriptor.Name()).To(Equal("getName"))
-			Expect(pkg.Structs[0].Methods[0].Descriptor.Arguments).To(BeEmpty())
-			Expect(pkg.Structs[0].Methods[0].Descriptor.Recv).To(HaveLen(1))
-			Expect(pkg.Structs[0].Methods[0].Descriptor.Recv[0].Type.Type).To(Equal(pkg.Structs[0]))
-
-			Expect(pkg.Methods[0].Name()).To(Equal("getName"))
-			Expect(pkg.Methods[1].Name()).To(Equal("getName_"))
+			Expect(pkg.Structs[0].Methods()).To(HaveLen(1))
+			Expect(pkg.Structs[0].Methods()[0].Descriptor.Name()).To(Equal("getName"))
+			Expect(pkg.Structs[0].Methods()[0].Descriptor.Arguments).To(BeEmpty())
+			Expect(pkg.Structs[0].Methods()[0].Descriptor.Recv).To(HaveLen(1))
+			Expect(pkg.Structs[0].Methods()[0].Descriptor.Recv[0].Type.Type()).To(Equal(pkg.Structs[0]))
 
 		})
 
@@ -381,15 +364,14 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models7.sample.go", true)
+			exrr = env.parseFile(newDataPackageContext(env), "data/models7.sample.go")
 			Expect(exrr).To(BeNil())
 
-			pkg, ok := env.PackageByName("models")
+			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
 
-			Expect(pkg.Methods).To(HaveLen(2))
+			Expect(pkg.Methods).To(HaveLen(1))
 			Expect(pkg.Methods[0].Package()).To(Equal(pkg))
-
 		})
 	})
 
@@ -400,12 +382,15 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models8.sample.go", true)
+			exrr = env.parseFile(newDataPackageContext(env), "data/models8.sample.go")
 			Expect(exrr).To(BeNil())
 
-			models, _ := env.PackageByName("models")
-			fmt, _ := env.PackageByName("fmt")
-			time, _ := env.PackageByName("time")
+			models, ok := env.PackageByImportPath("data")
+			Expect(ok).To(BeTrue())
+			fmt, ok := env.PackageByImportPath("fmt")
+			Expect(ok).To(BeTrue())
+			time, ok := env.PackageByImportPath("time")
+			Expect(ok).To(BeTrue())
 
 			Expect(models).ToNot(BeNil())
 			Expect(fmt).ToNot(BeNil())
@@ -414,20 +399,19 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(models.Name).To(Equal("models"))
 			Expect(fmt.Name).To(Equal("fmt"))
 			Expect(time.Name).To(Equal("time"))
-
 		})
 
-		It("should check the struct types of import package bytes with dot", func() {
-			env, exrr := NewEnvironment()
-			Expect(exrr).To(BeNil())
+		It("should explore a dot imported package", func() {
+			env, err := NewEnvironment()
+			Expect(err).ToNot(HaveOccurred())
 
-			exrr = env.ParsePackage("data/models12.sample.go", true)
-			Expect(exrr).To(BeNil())
+			dataPkgCtx := newDataPackageContext(env)
+			Expect(env.parseFile(dataPkgCtx, "data/models12.sample.go")).To(Succeed())
 
-			models, ok := env.PackageByName("models")
+			models, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
 
-			bytes, ok := env.PackageByName("bytes")
+			bytes, ok := env.PackageByImportPath("bytes")
 			Expect(ok).To(BeTrue())
 
 			Expect(models.Methods).To(HaveLen(2))
@@ -435,13 +419,14 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(models.Methods[0].Arguments).To(HaveLen(1))
 			Expect(models.Methods[0].Arguments[0].Name).To(Equal("buf"))
 
-			ref := bytes.RefTypeByName("Buffer")
+			ref, ok := bytes.RefTypeByName("Buffer")
+			Expect(ok).To(BeTrue())
 			Expect(ref).ToNot(BeNil())
-			Expect(models.Methods[0].Arguments[0].Type.Name).To(Equal(ref.Type.Name()))
+			Expect(models.Methods[0].Arguments[0].Type.Name()).To(Equal(ref.Type().Name()))
 
 			stct := bytes.StructByName("Buffer")
 			Expect(stct).ToNot(BeNil())
-			Expect(models.Methods[0].Arguments[0].Type.Type).To(Equal(stct))
+			Expect(fmt.Sprintf("%p", models.Methods[0].Arguments[0].Type.Type())).To(Equal(fmt.Sprintf("%p", stct)))
 		})
 	})
 
@@ -452,10 +437,10 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models9.sample.go", true)
+			exrr = env.parseFile(newDataPackageContext(env), "data/models9.sample.go")
 			Expect(exrr).To(BeNil())
 
-			pkg, ok := env.PackageByName("models")
+			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
 
 			Expect(pkg.Doc.Comments).To(HaveLen(6))
@@ -482,10 +467,10 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models14.sample.go", true)
+			exrr = env.parseFile(newDataPackageContext(env), "data/models14.sample.go")
 			Expect(exrr).To(BeNil())
 
-			pkg, ok := env.PackageByName("models")
+			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
 
 			Expect(pkg.Doc.Comments).To(HaveLen(6))
@@ -505,23 +490,20 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models10.sample.go", true)
+			exrr = env.parseFile(newDataPackageContext(env), "data/models10.sample.go")
 			Expect(exrr).To(BeNil())
 
-			pkg, ok := env.PackageByName("models")
+			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
 
 			Expect(pkg.Doc.Comments).To(HaveLen(7))
 			Expect(pkg.Doc.Comments[0]).To(Equal("// Package models is a test"))
 
-			Expect(pkg.Methods).To(HaveLen(3))
+			Expect(pkg.Methods).To(HaveLen(2))
 			Expect(pkg.Methods[0].Doc.Comments).To(HaveLen(1))
-			Expect(pkg.Methods[0].Doc.Comments[0]).To(Equal("// Comment here"))
-			Expect(pkg.Methods[1].Doc.Comments).To(HaveLen(1))
-			Expect(pkg.Methods[1].Doc.Comments[0]).To(Equal("/** Description \n    multilines\n*/"))
-
+			Expect(pkg.Methods[0].Doc.Comments[0]).To(Equal("/** Description \n    multilines\n*/"))
+			Expect(pkg.Methods[1].Doc.Comments).To(BeEmpty())
 		})
-
 	})
 
 	When("parsing builtin file", func() {
@@ -531,39 +513,48 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.ParsePackage("data/models13.sample.go", true)
+			exrr = env.parseFile(newDataPackageContext(env), "data/models13.sample.go")
 			Expect(exrr).To(BeNil())
 
-			pkgM, okM := env.PackageByName("models")
-			pkgB, okB := env.PackageByName("builtin")
+			pkgM, okM := env.PackageByImportPath("data")
 			Expect(okM).To(BeTrue())
+			pkgB, okB := env.PackageByImportPath("builtin")
 			Expect(okB).To(BeTrue())
 
-			T1 := pkgB.RefTypeByName("string")
+			T1, ok := pkgB.RefTypeByName("string")
+			Expect(ok).To(BeTrue())
 			Expect(T1).ToNot(BeNil())
 
-			T2 := pkgB.RefTypeByName("int")
+			T2, ok := pkgB.RefTypeByName("int")
+			Expect(ok).To(BeTrue())
 			Expect(T2).ToNot(BeNil())
 
-			T3 := pkgB.RefTypeByName("int8")
+			T3, ok := pkgB.RefTypeByName("int8")
+			Expect(ok).To(BeTrue())
 			Expect(T3).ToNot(BeNil())
 
-			T4 := pkgB.RefTypeByName("int16")
+			T4, ok := pkgB.RefTypeByName("int16")
+			Expect(ok).To(BeTrue())
 			Expect(T4).ToNot(BeNil())
 
-			T5 := pkgB.RefTypeByName("int32")
+			T5, ok := pkgB.RefTypeByName("int32")
+			Expect(ok).To(BeTrue())
 			Expect(T5).ToNot(BeNil())
 
-			T6 := pkgB.RefTypeByName("int64")
+			T6, ok := pkgB.RefTypeByName("int64")
+			Expect(ok).To(BeTrue())
 			Expect(T6).ToNot(BeNil())
 
-			T7 := pkgB.RefTypeByName("float32")
+			T7, ok := pkgB.RefTypeByName("float32")
+			Expect(ok).To(BeTrue())
 			Expect(T7).ToNot(BeNil())
 
-			T8 := pkgB.RefTypeByName("float64")
+			T8, ok := pkgB.RefTypeByName("float64")
+			Expect(ok).To(BeTrue())
 			Expect(T8).ToNot(BeNil())
 
-			T9 := pkgB.RefTypeByName("byte")
+			T9, ok := pkgB.RefTypeByName("byte")
+			Expect(ok).To(BeTrue())
 			Expect(T9).ToNot(BeNil())
 
 			Expect(pkgM.Structs).To(HaveLen(1))
@@ -582,25 +573,26 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 		})
 
 		It("should check builtin file", func() {
-
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			pkg, ok := env.PackageByName("builtin")
+			pkg, ok := env.PackageByImportPath("builtin")
 			Expect(ok).To(BeTrue())
 
-			ref := pkg.RefTypeByName("string")
+			ref, ok := pkg.RefTypeByName("string")
+			Expect(ok).To(BeTrue())
 			Expect(ref).ToNot(BeNil())
 
-			ref = pkg.RefTypeByName("int64")
+			ref, ok = pkg.RefTypeByName("int64")
+			Expect(ok).To(BeTrue())
 			Expect(ref).ToNot(BeNil())
 
-			ref = pkg.RefTypeByName("float32")
+			ref, ok = pkg.RefTypeByName("float32")
+			Expect(ok).To(BeTrue())
 			Expect(ref).ToNot(BeNil())
 
 			// ### WORK IN PROGRESS ###
 		})
 
 	})
-
 })
