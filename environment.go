@@ -103,6 +103,17 @@ func (env *environment) Import(importPathPkg string) (*build.Package, error) {
 	return buildPkg, nil
 }
 
+func (env *environment) ImportDir(importDir string) (*build.Package, error) {
+	buildPkg, err := env.BuildContext.ImportDir(importDir, build.ImportComment)
+	if err != nil {
+		return nil, err
+	}
+	if err != nil {
+		return nil, err
+	}
+	return buildPkg, nil
+}
+
 // PackageByImportPath find Package by name in Environment.
 func (env *environment) PackageByImportPath(importPath string) (*Package, bool) {
 	pkg, ok := env.packageMap[importPath]
@@ -125,6 +136,30 @@ func (env *environment) parsePackage(pkgCtx *parsePackageContext) error {
 	}
 	pkgCtx.Package.explored = true
 	return nil
+}
+
+func (env *environment) ParseDir(dir string) (*Package, error) {
+	// Find the path of the package.
+	buildPkg, err := env.BuildContext.ImportDir(dir, build.ImportComment)
+	if err != nil {
+		return nil, err
+	}
+
+	p, ok := env.packageMap[buildPkg.ImportPath]
+	if ok { // If the package exists in the environment.
+		if p.explored { // If the package is already explored.
+			return p, nil // just return it, no need to do anything.
+		}
+		// The package will be explored down function.
+	} else {
+		p = NewPackage(buildPkg)
+	}
+
+	err = env.parsePackage(NewPackageContext(p, buildPkg))
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
 // Parse checks if the parse was already done, if not, it parses the package.

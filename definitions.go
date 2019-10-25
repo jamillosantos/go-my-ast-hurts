@@ -79,8 +79,9 @@ type Package struct {
 	Name        string
 	ImportPath  string
 	RealPath    string
-	explored    bool
+	BuildInfo   *build.Package
 	Doc         Doc
+	explored    bool
 	Variables   []*Variable
 	Constants   []*Constant
 	Methods     []*MethodDescriptor
@@ -100,6 +101,7 @@ func NewPackage(buildPackage *build.Package) *Package {
 		Name:       buildPackage.Name,
 		ImportPath: buildPackage.ImportPath,
 		RealPath:   buildPackage.Dir,
+		BuildInfo:  buildPackage,
 		Constants:  make([]*Constant, 0),
 		Methods:    make([]*MethodDescriptor, 0),
 		Variables:  make([]*Variable, 0),
