@@ -97,17 +97,11 @@ func (env *environment) Import(importPathPkg string) (*build.Package, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err != nil {
-		return nil, err
-	}
 	return buildPkg, nil
 }
 
 func (env *environment) ImportDir(importDir string) (*build.Package, error) {
 	buildPkg, err := env.BuildContext.ImportDir(importDir, build.ImportComment)
-	if err != nil {
-		return nil, err
-	}
 	if err != nil {
 		return nil, err
 	}
