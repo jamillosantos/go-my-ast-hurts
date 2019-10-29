@@ -66,7 +66,8 @@ func parseInterface(ctx *parseFileContext, name string, spec *ast.InterfaceType,
 	for _, m := range spec.Methods.List {
 		funcType, ok := m.Type.(*ast.FuncType)
 		if !ok {
-			return nil, errors.Wrapf(ErrUnexpectedExpressionType, "*FuncType expected but %T found", m.Type)
+			pos := ctx.FSet.Position(spec.Pos())
+			return nil, errors.Wrapf(ErrUnexpectedExpressionType, "*FuncType expected but %T found while parsing %s (%s)", m.Type, name, pos.String())
 		}
 		name := ""
 		if len(m.Names) > 0 {

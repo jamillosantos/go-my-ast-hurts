@@ -31,6 +31,7 @@ func NewPackageContext(pkg *Package, buildPackage *build.Package) *parsePackageC
 // parseFileContext will keep all information needed for parsing a single file.
 type parseFileContext struct {
 	File                  *ast.File
+	FSet                  *token.FileSet
 	Env                   *environment
 	Package               *Package
 	dotImports            []*Package
@@ -225,6 +226,7 @@ func (env *environment) parseFile(pkgCtx *parsePackageContext, filePath string) 
 	// Create the context of the file parse.
 	fileCtx := &parseFileContext{
 		File:                  file,
+		FSet:                  fset,
 		Env:                   env,
 		Package:               pkgCtx.Package,
 		dotImports:            dotImports,
