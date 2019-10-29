@@ -12,7 +12,7 @@ var _ = Describe("MethodDescriptor", func() {
 			ref2 := NewRefType("ref2", nil, nil)
 			ref3 := NewRefType("ref3", nil, nil)
 			md1 := MethodDescriptor{
-				baseType: baseType{},
+				baseType: *NewBaseType(nil, ""),
 				Arguments: []MethodArgument{
 					{
 						Type: ref1,
@@ -31,7 +31,7 @@ var _ = Describe("MethodDescriptor", func() {
 				},
 			}
 			md2 := MethodDescriptor{
-				baseType: baseType{},
+				baseType: *NewBaseType(nil, ""),
 				Arguments: []MethodArgument{
 					{
 						Type: ref1,
@@ -57,7 +57,7 @@ var _ = Describe("MethodDescriptor", func() {
 			ref2 := NewRefType("ref2", nil, nil)
 			ref3 := NewRefType("ref3", nil, nil)
 			md1 := MethodDescriptor{
-				baseType: baseType{},
+				baseType: *NewBaseType(nil, ""),
 				Arguments: []MethodArgument{
 					{
 						Type: ref1,
@@ -76,7 +76,7 @@ var _ = Describe("MethodDescriptor", func() {
 				},
 			}
 			md2 := MethodDescriptor{
-				baseType: baseType{},
+				baseType: *NewBaseType(nil, ""),
 				Arguments: []MethodArgument{
 					{
 						Type: ref1,
@@ -99,7 +99,7 @@ var _ = Describe("MethodDescriptor", func() {
 			ref2 := NewRefType("ref2", nil, nil)
 			ref3 := NewRefType("ref3", nil, nil)
 			md1 := MethodDescriptor{
-				baseType: baseType{},
+				baseType: *NewBaseType(nil, ""),
 				Arguments: []MethodArgument{
 					{
 						Type: ref1,
@@ -118,7 +118,7 @@ var _ = Describe("MethodDescriptor", func() {
 				},
 			}
 			md2 := MethodDescriptor{
-				baseType: baseType{},
+				baseType: *NewBaseType(nil, ""),
 				Arguments: []MethodArgument{
 					{
 						Type: ref1,
@@ -141,7 +141,7 @@ var _ = Describe("MethodDescriptor", func() {
 			ref2 := NewRefType("ref2", nil, nil)
 			ref3 := NewRefType("ref3", nil, nil)
 			md1 := MethodDescriptor{
-				baseType: baseType{},
+				baseType: *NewBaseType(nil, ""),
 				Arguments: []MethodArgument{
 					{
 						Type: ref1,
@@ -160,7 +160,7 @@ var _ = Describe("MethodDescriptor", func() {
 				},
 			}
 			md2 := MethodDescriptor{
-				baseType: baseType{},
+				baseType: *NewBaseType(nil, ""),
 				Arguments: []MethodArgument{
 					{
 						Type: ref1,
@@ -186,7 +186,7 @@ var _ = Describe("MethodDescriptor", func() {
 			ref2 := NewRefType("ref2", nil, nil)
 			ref3 := NewRefType("ref3", nil, nil)
 			md1 := MethodDescriptor{
-				baseType: baseType{},
+				baseType: *NewBaseType(nil, ""),
 				Arguments: []MethodArgument{
 					{
 						Type: ref1,
@@ -205,7 +205,7 @@ var _ = Describe("MethodDescriptor", func() {
 				},
 			}
 			md2 := MethodDescriptor{
-				baseType: baseType{},
+				baseType: *NewBaseType(nil, ""),
 				Arguments: []MethodArgument{
 					{
 						Type: ref1,

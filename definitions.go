@@ -57,7 +57,7 @@ type Package struct {
 	Variables   []*Variable
 	Constants   []*Constant
 	Methods     []*MethodDescriptor
-	methodMap   map[string]*MethodDescriptor
+	methodsMap  map[string]*MethodDescriptor
 	Structs     []*Struct
 	Interfaces  []*Interface
 	RefType     []RefType
@@ -77,7 +77,7 @@ func NewPackage(buildPackage *build.Package) *Package {
 		Constants:  make([]*Constant, 0),
 		Methods:    make([]*MethodDescriptor, 0),
 		Variables:  make([]*Variable, 0),
-		methodMap:  make(map[string]*MethodDescriptor),
+		methodsMap: make(map[string]*MethodDescriptor),
 		Structs:    make([]*Struct, 0),
 		Interfaces: make([]*Interface, 0),
 		RefType: []RefType{
@@ -303,17 +303,19 @@ type Type interface {
 }
 
 type baseType struct {
-	pkg     *Package
-	name    string
-	methods []*TypeMethod
+	pkg        *Package
+	name       string
+	methods    []*TypeMethod
+	methodsMap map[string]*TypeMethod
 }
 
 // NewBaseType creates a new initialized baseType.
 func NewBaseType(pkg *Package, name string) *baseType {
 	return &baseType{
-		pkg:     pkg,
-		name:    name,
-		methods: make([]*TypeMethod, 0),
+		pkg:        pkg,
+		name:       name,
+		methods:    make([]*TypeMethod, 0),
+		methodsMap: make(map[string]*TypeMethod, 0),
 	}
 }
 
@@ -331,6 +333,7 @@ func (t *baseType) Methods() []*TypeMethod {
 
 func (t *baseType) AddMethod(method *TypeMethod) {
 	t.methods = append(t.methods, method)
+	t.methodsMap[method.Descriptor.Name()] = method
 }
 
 type TypeMethod struct {
@@ -372,16 +375,33 @@ func (doc *Doc) FormatComment() string {
 // AppendStruct add new Struct in Package
 func (p *Package) AppendStruct(s *Struct) {
 	p.Structs = append(p.Structs, s)
+	p.Types = append(p.Types, s)
 }
 
 // StructByName find Struct by name.
-func (p *Package) StructByName(name string) *Struct {
+func (p *Package) StructByName(name string) (*Struct, bool) {
 	for _, e := range p.Structs {
 		if e.Name() == name {
-			return e
+			return e, true
 		}
 	}
-	return nil
+	return nil, false
+}
+
+// AppendInterface registers a new Interface to the package.
+func (p *Package) AppendInterface(s *Interface) {
+	p.Interfaces = append(p.Interfaces, s)
+	p.Types = append(p.Types, s)
+}
+
+// StructByName find Struct by name.
+func (p *Package) InterfaceByName(name string) (*Interface, bool) {
+	for _, e := range p.Interfaces {
+		if e.Name() == name {
+			return e, true
+		}
+	}
+	return nil, false
 }
 
 // EnsureRefType will try to get the RefType from the list by the name param. If
@@ -423,11 +443,11 @@ func (p *Package) AppendRefType(name string) (ref RefType) {
 
 func (p *Package) AppendMethod(method *MethodDescriptor) {
 	p.Methods = append(p.Methods, method)
-	//p.methodMap[method.Name()] = method
+	p.methodsMap[method.Name()] = method
 }
 
 func (p *Package) MethodByName(name string) (*MethodDescriptor, bool) {
-	m, ok := p.methodMap[name]
+	m, ok := p.methodsMap[name]
 	return m, ok
 }
 

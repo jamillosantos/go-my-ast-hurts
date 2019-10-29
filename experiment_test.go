@@ -335,6 +335,14 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(pkg.Methods[1].Name()).To(Equal("welcome"))
 			Expect(pkg.Methods[1].Arguments).To(BeEmpty())
 			Expect(pkg.Methods[1].Recv).To(BeEmpty())
+			Expect(pkg.Methods[1].Result).To(HaveLen(1))
+			Expect(pkg.Methods[1].Result[0].Type.Name()).To(Equal("string"))
+
+			Expect(pkg.methodsMap).To(HaveLen(2))
+			Expect(pkg.methodsMap).To(HaveKey("show"))
+			Expect(pkg.methodsMap).To(HaveKey("welcome"))
+
+			Expect(pkg.Methods[0].Name()).To(Equal("show"))
 
 		})
 
@@ -357,7 +365,10 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(pkg.Structs[0].Methods()[0].Descriptor.Arguments).To(BeEmpty())
 			Expect(pkg.Structs[0].Methods()[0].Descriptor.Recv).To(HaveLen(1))
 			Expect(pkg.Structs[0].Methods()[0].Descriptor.Recv[0].Type.Type()).To(Equal(pkg.Structs[0]))
-
+			Expect(pkg.Structs[0].Methods()[0].Descriptor.Result).To(HaveLen(1))
+			Expect(pkg.Structs[0].Methods()[0].Descriptor.Result[0].Type.Name()).To(Equal("string"))
+			Expect(pkg.Structs[0].methodsMap).To(HaveLen(1))
+			Expect(pkg.Structs[0].methodsMap).To(HaveKey("getName"))
 		})
 
 		It("should check package of func", func() {
@@ -424,7 +435,8 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(ref).ToNot(BeNil())
 			Expect(models.Methods[0].Arguments[0].Type.Name()).To(Equal(ref.Type().Name()))
 
-			stct := bytes.StructByName("Buffer")
+			stct, ok := bytes.StructByName("Buffer")
+			Expect(ok).To(BeTrue())
 			Expect(stct).ToNot(BeNil())
 			Expect(fmt.Sprintf("%p", models.Methods[0].Arguments[0].Type.Type())).To(Equal(fmt.Sprintf("%p", stct)))
 		})

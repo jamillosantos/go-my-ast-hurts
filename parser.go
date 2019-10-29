@@ -61,19 +61,48 @@ func parseGenDecl(ctx *parseFileContext, s *ast.GenDecl) error {
 	return nil
 }
 
+func parseInterface(ctx *parseFileContext, name string, spec *ast.InterfaceType, docComments []string) (*Interface, error) {
+	i := NewInterface(ctx.Package, name)
+	for _, m := range spec.Methods.List {
+		funcType, ok := m.Type.(*ast.FuncType)
+		if !ok {
+			return nil, errors.Wrapf(ErrUnexpectedExpressionType, "*FuncType expected but %T found", m.Type)
+		}
+		name := ""
+		if len(m.Names) > 0 {
+			name = m.Names[0].Name
+		}
+		md, err := parseFuncType(ctx, name, funcType)
+		if err != nil {
+			return nil, err
+		}
+		i.AddMethod(&TypeMethod{
+			Name:       md.Name(),
+			Descriptor: md,
+		})
+	}
+	return i, nil
+}
+
 func parseSpec(ctx *parseFileContext, spec ast.Spec, docComments []string) error {
 	switch s := spec.(type) {
 	case *ast.TypeSpec:
 		nameType := s.Name.Name
 		switch t := s.Type.(type) {
+		case *ast.InterfaceType:
+			i, err := parseInterface(ctx, nameType, t, docComments)
+			if err != nil {
+				return err
+			}
+			ctx.Package.AppendInterface(i)
 		case *ast.StructType:
-			declStruct := NewStruct(ctx.Package, s.Name.Name)
+			declStruct := NewStruct(ctx.Package, nameType)
 			declStruct.Doc = Doc{
 				Comments: docComments,
 			}
 
 			// Get the refType from the package.
-			refType, ok := ctx.Package.RefTypeByName(s.Name.Name)
+			refType, ok := ctx.Package.RefTypeByName(nameType)
 			if ok {
 				// If the refType exists...
 				if refType.Type() != nil { // if the refType is already resolved
@@ -88,7 +117,7 @@ func parseSpec(ctx *parseFileContext, spec ast.Spec, docComments []string) error
 				refType.AppendType(declStruct) // Realizes the refType
 			} else {
 				// If the ref type does not exists, creates and registers it.
-				refType = NewRefType(s.Name.Name, ctx.Package, declStruct)
+				refType = NewRefType(nameType, ctx.Package, declStruct)
 				ctx.Package.AddRefType(refType)
 			}
 
@@ -96,8 +125,7 @@ func parseSpec(ctx *parseFileContext, spec ast.Spec, docComments []string) error
 			if err != nil {
 				return err
 			}
-			ctx.Package.Structs = append(ctx.Package.Structs, declStruct)
-			ctx.Package.Types = append(ctx.Package.Types, declStruct)
+			ctx.Package.AppendStruct(declStruct)
 		case *ast.Ident:
 			if ctx.File.Name.Name == "builtin" {
 				if nameType != t.Name {
@@ -260,6 +288,25 @@ func parseFuncDecl(ctx *parseFileContext, f *ast.FuncDecl) error {
 
 		method.Arguments = append(method.Arguments, argument)
 	}
+
+	if f.Type.Results != nil {
+		for _, field := range f.Type.Results.List {
+			r := MethodResult{}
+			if len(field.Names) > 0 {
+				r.Name = field.Names[0].Name
+			}
+
+			refType, err := parseType(ctx, field.Type)
+			if err != nil {
+				return err
+			}
+
+			r.Type = refType
+
+			method.Result = append(method.Result, r)
+		}
+	}
+
 	return nil
 }
 
@@ -326,7 +373,12 @@ func parseType(ctx *parseFileContext, t ast.Expr) (RefType, error) {
 		}
 		return NewChanRefType(refType), nil
 	case *ast.FuncType:
-		return parseFuncType(ctx, recvT)
+		md, err := parseFuncType(ctx, "", recvT)
+		if err != nil {
+			return nil, err
+		}
+		refType := NewRefType("", ctx.Package, md)
+		return refType, nil
 	case *ast.Ellipsis: // TODO(Jeconias): Shall Ellipsis be represented as a Type not a RefType?
 		refType, err := parseType(ctx, recvT.Elt)
 		if err != nil {
@@ -339,9 +391,9 @@ func parseType(ctx *parseFileContext, t ast.Expr) (RefType, error) {
 	}
 }
 
-func parseFuncType(ctx *parseFileContext, f *ast.FuncType) (RefType, error) {
+func parseFuncType(ctx *parseFileContext, name string, f *ast.FuncType) (*MethodDescriptor, error) {
 	md := &MethodDescriptor{
-		baseType: *NewBaseType(ctx.Package, ""),
+		baseType: *NewBaseType(ctx.Package, name),
 	}
 
 	for _, p := range f.Params.List {
@@ -371,7 +423,24 @@ func parseFuncType(ctx *parseFileContext, f *ast.FuncType) (RefType, error) {
 		md.Arguments = append(md.Arguments, methodArg)
 	}
 
-	return NewRefType("", ctx.Package, md), nil
+	if f.Results != nil {
+		for _, r := range f.Results.List {
+			name := ""
+			if len(r.Names) > 0 {
+				name = r.Names[0].Name
+			}
+			refType, err := parseType(ctx, r.Type)
+			if err != nil {
+				return nil, err
+			}
+			md.Result = append(md.Result, MethodResult{
+				Name: name,
+				Type: refType,
+			})
+		}
+	}
+
+	return md, nil
 }
 
 func parseVariable(ctx *parseFileContext, vValue *ast.ValueSpec) (*Variable, error) {

@@ -2,18 +2,14 @@ package myasthurts
 
 type Struct struct {
 	baseType
-	Doc        Doc
-	Fields     []*Field
-	Interfaces []*Interface
+	Doc    Doc
+	Fields []*Field
 }
 
 // NewStruct return new pointer Struct
 func NewStruct(pkg *Package, name string) *Struct {
 	srct := &Struct{
-		baseType: baseType{
-			pkg:  pkg,
-			name: name,
-		},
+		baseType: *NewBaseType(pkg, name),
 	}
 	return srct
 }
@@ -26,4 +22,21 @@ func (s *Struct) Package() *Package {
 // Name return name of Struct
 func (s *Struct) Name() string {
 	return s.name
+}
+
+// Implements checks if this struct implements a given interface.
+//
+// This method uses the `MethodDescriptor.Compatible` to check if all interface
+// methods have are implemented on the struct.
+func (s *Struct) Implements(i *Interface) bool {
+	for _, m := range i.Methods() {
+		method, ok := s.methodsMap[m.Descriptor.Name()]
+		if !ok {
+			return false
+		}
+		if !method.Descriptor.Compatible(m.Descriptor) {
+			return false
+		}
+	}
+	return true
 }
