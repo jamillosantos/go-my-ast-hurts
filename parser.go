@@ -64,23 +64,30 @@ func parseGenDecl(ctx *parseFileContext, s *ast.GenDecl) error {
 func parseInterface(ctx *parseFileContext, name string, spec *ast.InterfaceType, docComments []string) (*Interface, error) {
 	i := NewInterface(ctx.Package, name)
 	for _, m := range spec.Methods.List {
-		funcType, ok := m.Type.(*ast.FuncType)
-		if !ok {
+		switch t := m.Type.(type) {
+		case *ast.Ident:
+			// This case is for composing interfaces for this same package.
+			// TODO(jota): Parse interfaces and create a mechanism for "including methods".
+		case *ast.SelectorExpr:
+			// This case is for composing interfaces from other packages.
+			// TODO(jota): Parse interfaces and create a mechanism for "including methods".
+		case *ast.FuncType:
+			name := ""
+			if len(m.Names) > 0 {
+				name = m.Names[0].Name
+			}
+			md, err := parseFuncType(ctx, name, t)
+			if err != nil {
+				return nil, err
+			}
+			i.AddMethod(&TypeMethod{
+				Name:       md.Name(),
+				Descriptor: md,
+			})
+		default:
 			pos := ctx.FSet.Position(spec.Pos())
-			return nil, errors.Wrapf(ErrUnexpectedExpressionType, "*FuncType expected but %T found while parsing %s (%s)", m.Type, name, pos.String())
+			return nil, errors.Wrapf(ErrUnexpectedExpressionType, "%T found while parsing %s (%s)", m.Type, name, pos.String())
 		}
-		name := ""
-		if len(m.Names) > 0 {
-			name = m.Names[0].Name
-		}
-		md, err := parseFuncType(ctx, name, funcType)
-		if err != nil {
-			return nil, err
-		}
-		i.AddMethod(&TypeMethod{
-			Name:       md.Name(),
-			Descriptor: md,
-		})
 	}
 	return i, nil
 }

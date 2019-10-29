@@ -28,6 +28,8 @@ func (s *Struct) Name() string {
 //
 // This method uses the `MethodDescriptor.Compatible` to check if all interface
 // methods have are implemented on the struct.
+//
+// TODO(jota): Take into consideration Interface composing...
 func (s *Struct) Implements(i *Interface) bool {
 	for _, m := range i.Methods() {
 		method, ok := s.methodsMap[m.Descriptor.Name()]

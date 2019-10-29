@@ -1,5 +1,7 @@
 package models
 
+import "io"
+
 type HasName interface {
 	Name() string
 	SetName(value string)
@@ -11,6 +13,7 @@ type HasAge interface {
 }
 
 type HasNameWrong interface {
+	io.Reader
 	Name() string
 	SetName(value int)
 }
