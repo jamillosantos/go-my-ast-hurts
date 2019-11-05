@@ -3,7 +3,7 @@ package myasthurts
 import (
 	"testing"
 
-	"github.com/crowley-io/macchiato"
+	"github.com/novln/macchiato"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 )
