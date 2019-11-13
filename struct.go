@@ -1,7 +1,7 @@
 package myasthurts
 
 type Struct struct {
-	baseType
+	BaseType
 	Doc    Doc
 	Fields []*Field
 }
@@ -9,7 +9,7 @@ type Struct struct {
 // NewStruct return new pointer Struct
 func NewStruct(pkg *Package, name string) *Struct {
 	srct := &Struct{
-		baseType: *NewBaseType(pkg, name),
+		BaseType: *NewBaseType(pkg, name),
 	}
 	return srct
 }

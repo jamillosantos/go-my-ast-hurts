@@ -1,13 +1,13 @@
 package myasthurts
 
 type Interface struct {
-	baseType
+	BaseType
 	Doc Doc
 }
 
 // NewInterface Create new Interface.
 func NewInterface(pkg *Package, name string) *Interface {
 	return &Interface{
-		baseType: *NewBaseType(pkg, name),
+		BaseType: *NewBaseType(pkg, name),
 	}
 }

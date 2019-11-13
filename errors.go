@@ -8,4 +8,7 @@ var (
 	ErrPackageAliasNotFound     = errors.New("package alias not found")
 	ErrUnexpectedSelector       = errors.New("unexpected selector identifier")
 	ErrUnexpectedExpressionType = errors.New("unexpected expression type")
+
+	// Skip will cancel the action.
+	Skip = errors.New("skip action")
 )

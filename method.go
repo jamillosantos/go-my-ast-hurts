@@ -8,7 +8,7 @@ type MethodArgument struct {
 }
 
 type MethodDescriptor struct {
-	baseType
+	BaseType
 	Doc       Doc
 	Recv      []MethodArgument
 	Arguments []MethodArgument
@@ -24,7 +24,7 @@ type MethodResult struct {
 // NewMethodDescriptor return the pointer of new MethodDescriptor
 func NewMethodDescriptor(pkg *Package, name string) *MethodDescriptor {
 	return &MethodDescriptor{
-		baseType: *NewBaseType(pkg, name),
+		BaseType: *NewBaseType(pkg, name),
 	}
 }
 

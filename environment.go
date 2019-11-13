@@ -11,8 +11,8 @@ import (
 	"path"
 )
 
-// parsePackageContext keeps all information needed for parsing a package.
-type parsePackageContext struct {
+// ParsePackageContext keeps all information needed for parsing a package.
+type ParsePackageContext struct {
 	// BuildPackage holds the build information about the package.
 	BuildPackage *build.Package
 
@@ -21,31 +21,31 @@ type parsePackageContext struct {
 	Package *Package
 }
 
-func NewPackageContext(pkg *Package, buildPackage *build.Package) *parsePackageContext {
-	return &parsePackageContext{
+func NewPackageContext(pkg *Package, buildPackage *build.Package) *ParsePackageContext {
+	return &ParsePackageContext{
 		BuildPackage: buildPackage,
 		Package:      pkg,
 	}
 }
 
-// parseFileContext will keep all information needed for parsing a single file.
-type parseFileContext struct {
+// ParseFileContext will keep all information needed for parsing a single file.
+type ParseFileContext struct {
 	File                  *ast.File
 	FSet                  *token.FileSet
-	Env                   *environment
+	Env                   *Environment
 	Package               *Package
 	dotImports            []*Package
 	packageImportAliasMap map[string]*Package
 }
 
-func (ctx *parseFileContext) PackageByImportAlias(name string) (*Package, bool) {
+func (ctx *ParseFileContext) PackageByImportAlias(name string) (*Package, bool) {
 	pkg, ok := ctx.packageImportAliasMap[name]
 	return pkg, ok
 }
 
 // GetRefType will return a type defined on the context or in the dot imported
 // libraries. If no file exists, it will return an `ErrTypeNotFound`.
-func (ctx *parseFileContext) GetRefType(name string) (RefType, bool) {
+func (ctx *ParseFileContext) GetRefType(name string) (RefType, bool) {
 	// First, it tries to find the type on its own package.
 	if t, ok := ctx.Package.RefTypeByName(name); ok {
 		return t, true
@@ -62,8 +62,12 @@ func (ctx *parseFileContext) GetRefType(name string) (RefType, bool) {
 	return nil, false
 }
 
-type environment struct {
+// Environment is the virtual representation of a Go environment.
+type Environment struct {
+	// BuildContext is the reference of the build context used to extract
+	// information about the packages.
 	BuildContext build.Context
+
 	// BuiltIn is the builtin package reference, already explored.
 	BuiltIn *Package
 
@@ -74,10 +78,14 @@ type environment struct {
 	packageMap map[string]*Package
 
 	Config EnvConfig
+
+	// Listener implement a set of interfaces that let the developer to have
+	// some control over how files are parsed.
+	Listener interface{}
 }
 
-func NewEnvironment() (*environment, error) {
-	env := &environment{
+func NewEnvironment() (*Environment, error) {
+	env := &Environment{
 		packages:     make([]*Package, 0, 5),
 		packageMap:   make(map[string]*Package, 5),
 		BuildContext: build.Default,
@@ -89,7 +97,16 @@ func NewEnvironment() (*environment, error) {
 	return env, nil
 }
 
-func (env *environment) Import(importPathPkg string) (*build.Package, error) {
+func NewEnvironmentWithListener(listener interface{}) (*Environment, error) {
+	env, err := NewEnvironment()
+	if err != nil {
+		return nil, err
+	}
+	env.Listener = listener
+	return env, nil
+}
+
+func (env *Environment) Import(importPathPkg string) (*build.Package, error) {
 	d := "."
 	if env.Config.CurrentDir != "" {
 		d = env.Config.CurrentDir
@@ -101,7 +118,7 @@ func (env *environment) Import(importPathPkg string) (*build.Package, error) {
 	return buildPkg, nil
 }
 
-func (env *environment) ImportDir(importDir string) (*build.Package, error) {
+func (env *Environment) ImportDir(importDir string) (*build.Package, error) {
 	buildPkg, err := env.BuildContext.ImportDir(importDir, build.ImportComment)
 	if err != nil {
 		return nil, err
@@ -110,30 +127,31 @@ func (env *environment) ImportDir(importDir string) (*build.Package, error) {
 }
 
 // PackageByImportPath find Package by name in Environment.
-func (env *environment) PackageByImportPath(importPath string) (*Package, bool) {
+func (env *Environment) PackageByImportPath(importPath string) (*Package, bool) {
 	pkg, ok := env.packageMap[importPath]
 	return pkg, ok
 }
 
 // AppendPackage add new Package in Environment.
-func (env *environment) AppendPackage(pkg *Package) {
+func (env *Environment) AppendPackage(pkg *Package) {
 	env.packages = append(env.packages, pkg)
 	env.packageMap[pkg.ImportPath] = pkg
 }
 
 // parsePackage will list all files for a package and
-func (env *environment) parsePackage(pkgCtx *parsePackageContext) error {
+func (env *Environment) parsePackage(pkgCtx *ParsePackageContext) error {
 	for _, file := range pkgCtx.BuildPackage.GoFiles {
 		filePath := path.Join(pkgCtx.Package.RealPath, file)
-		if err := env.parseFile(pkgCtx, filePath); err != nil {
+
+		if err := env.ParseFile(pkgCtx, filePath); err != nil {
 			return err
 		}
 	}
-	pkgCtx.Package.explored = true
+	pkgCtx.Package.Explored = true
 	return nil
 }
 
-func (env *environment) ParseDir(dir string) (*Package, error) {
+func (env *Environment) ParseDir(dir string) (*Package, error) {
 	// Find the path of the package.
 	buildPkg, err := env.BuildContext.ImportDir(dir, build.ImportComment)
 	if err != nil {
@@ -142,7 +160,7 @@ func (env *environment) ParseDir(dir string) (*Package, error) {
 
 	p, ok := env.packageMap[buildPkg.ImportPath]
 	if ok { // If the package exists in the environment.
-		if p.explored { // If the package is already explored.
+		if p.Explored { // If the package is already explored.
 			return p, nil // just return it, no need to do anything.
 		}
 		// The package will be explored down function.
@@ -158,9 +176,9 @@ func (env *environment) ParseDir(dir string) (*Package, error) {
 }
 
 // Parse checks if the parse was already done, if not, it parses the package.
-func (env *environment) Parse(packageName string) (*Package, error) {
+func (env *Environment) Parse(packageName string) (*Package, error) {
 	p, ok := env.packageMap[packageName]
-	if ok && p.explored { // If the package exists in the environment and it was explored.
+	if ok && p.Explored { // If the package exists in the environment and it was explored.
 		return p, nil // just return it, no need to do anything.
 	}
 
@@ -189,14 +207,14 @@ func (env *environment) Parse(packageName string) (*Package, error) {
 	return pkgCtx.Package, nil
 }
 
-func (env *environment) gorootSourceDir() (rtn string, exrr error) {
+func (env *Environment) gorootSourceDir() (rtn string, exrr error) {
 	if rtn = os.Getenv("GOROOT"); rtn == "" {
 		return "", errors.New("GOROOT environment variable not found or is empty")
 	}
 	return fmt.Sprintf("%s/src", rtn), nil
 }
 
-func (env *environment) makeEnv() error {
+func (env *Environment) makeEnv() error {
 	pkg, err := env.Parse("builtin")
 	if err != nil {
 		return err
@@ -205,7 +223,7 @@ func (env *environment) makeEnv() error {
 	return nil
 }
 
-func (env *environment) parseFile(pkgCtx *parsePackageContext, filePath string) error {
+func (env *Environment) ParseFile(pkgCtx *ParsePackageContext, filePath string) error {
 	var (
 		file *ast.File
 		fset *token.FileSet
@@ -224,7 +242,7 @@ func (env *environment) parseFile(pkgCtx *parsePackageContext, filePath string) 
 	} // If it is not defined, it means we are parsing the builtin package.
 
 	// Create the context of the file parse.
-	fileCtx := &parseFileContext{
+	fileCtx := &ParseFileContext{
 		File:                  file,
 		FSet:                  fset,
 		Env:                   env,

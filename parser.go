@@ -8,9 +8,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-func parseFileName(ctx *parseFileContext) error {
+func parseFileName(ctx *ParseFileContext) error {
 	pkg := ctx.Package
-	if pkg.explored { // If the package is already explored, ignore this.
+	if pkg.Explored { // If the package is already explored, ignore this.
 		return nil
 	}
 	var comments []string
@@ -40,7 +40,7 @@ func parseComments(doc *ast.CommentGroup) (r []string, exrr error) {
 	return t, nil
 }
 
-func parseGenDecl(ctx *parseFileContext, s *ast.GenDecl) error {
+func parseGenDecl(ctx *ParseFileContext, s *ast.GenDecl) error {
 	var (
 		docs []string
 		err  error
@@ -61,7 +61,7 @@ func parseGenDecl(ctx *parseFileContext, s *ast.GenDecl) error {
 	return nil
 }
 
-func parseInterface(ctx *parseFileContext, name string, spec *ast.InterfaceType, docComments []string) (*Interface, error) {
+func parseInterface(ctx *ParseFileContext, name string, spec *ast.InterfaceType, docComments []string) (*Interface, error) {
 	i := NewInterface(ctx.Package, name)
 	for _, m := range spec.Methods.List {
 		switch t := m.Type.(type) {
@@ -92,7 +92,7 @@ func parseInterface(ctx *parseFileContext, name string, spec *ast.InterfaceType,
 	return i, nil
 }
 
-func parseSpec(ctx *parseFileContext, spec ast.Spec, docComments []string) error {
+func parseSpec(ctx *ParseFileContext, spec ast.Spec, docComments []string) error {
 	switch s := spec.(type) {
 	case *ast.TypeSpec:
 		nameType := s.Name.Name
@@ -114,13 +114,13 @@ func parseSpec(ctx *parseFileContext, spec ast.Spec, docComments []string) error
 			if ok {
 				// If the refType exists...
 				if refType.Type() != nil { // if the refType is already resolved
-					bt, ok := refType.Type().(*baseType)
+					bt, ok := refType.Type().(*BaseType)
 					if !ok { // That means a double declaration or some unexpected error...
 						return fmt.Errorf("type %t was not expected", refType.Type())
 					}
 					// Since it is a baseType, we should make it specific
 					// (struct) and use its already defined methods ...
-					declStruct.baseType = *bt
+					declStruct.BaseType = *bt
 				}
 				refType.AppendType(declStruct) // Realizes the refType
 			} else {
@@ -190,7 +190,7 @@ func parseSpec(ctx *parseFileContext, spec ast.Spec, docComments []string) error
 	return nil
 }
 
-func parseStruct(ctx *parseFileContext, astStruct *ast.StructType, typeStruct *Struct) error {
+func parseStruct(ctx *ParseFileContext, astStruct *ast.StructType, typeStruct *Struct) error {
 	for _, field := range astStruct.Fields.List {
 		refType, err := parseType(ctx, field.Type)
 		if err != nil {
@@ -245,7 +245,7 @@ func parseStruct(ctx *parseFileContext, astStruct *ast.StructType, typeStruct *S
 	return nil
 }
 
-func parseFuncDecl(ctx *parseFileContext, f *ast.FuncDecl) error {
+func parseFuncDecl(ctx *ParseFileContext, f *ast.FuncDecl) error {
 	method := NewMethodDescriptor(ctx.Package, f.Name.Name)
 	hasReceiver := f.Recv != nil && len(f.Recv.List) > 0
 	if hasReceiver {
@@ -319,7 +319,7 @@ func parseFuncDecl(ctx *parseFileContext, f *ast.FuncDecl) error {
 }
 
 // parseType will return a RefType for a given type.
-func parseType(ctx *parseFileContext, t ast.Expr) (RefType, error) {
+func parseType(ctx *ParseFileContext, t ast.Expr) (RefType, error) {
 	switch recvT := t.(type) {
 	// This case will cover the identifier type. This is for string, int64 and
 	// types defined on the same package.
@@ -399,9 +399,9 @@ func parseType(ctx *parseFileContext, t ast.Expr) (RefType, error) {
 	}
 }
 
-func parseFuncType(ctx *parseFileContext, name string, f *ast.FuncType) (*MethodDescriptor, error) {
+func parseFuncType(ctx *ParseFileContext, name string, f *ast.FuncType) (*MethodDescriptor, error) {
 	md := &MethodDescriptor{
-		baseType: *NewBaseType(ctx.Package, name),
+		BaseType: *NewBaseType(ctx.Package, name),
 	}
 
 	for _, p := range f.Params.List {
@@ -451,7 +451,7 @@ func parseFuncType(ctx *parseFileContext, name string, f *ast.FuncType) (*Method
 	return md, nil
 }
 
-func parseVariable(ctx *parseFileContext, vValue *ast.ValueSpec) (*Variable, error) {
+func parseVariable(ctx *ParseFileContext, vValue *ast.ValueSpec) (*Variable, error) {
 	variable := &Variable{
 		Name: vValue.Names[0].Name,
 	}
