@@ -1,7 +1,11 @@
 package myasthurts
 
 type (
-	ParseFileListener interface {
-		BeforeFile(string) error
+	ListenerBeforeFile interface {
+		BeforeFile(*ParsePackageContext, string) error
+	}
+
+	ListenerAfterFile interface {
+		AfterFile(*ParsePackageContext, string, error) error
 	}
 )

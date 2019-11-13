@@ -143,7 +143,23 @@ func (env *Environment) parsePackage(pkgCtx *ParsePackageContext) error {
 	for _, file := range pkgCtx.BuildPackage.GoFiles {
 		filePath := path.Join(pkgCtx.Package.RealPath, file)
 
-		if err := env.ParseFile(pkgCtx, filePath); err != nil {
+		if beforeFileListener, ok := env.Listener.(ListenerBeforeFile); ok {
+			err := beforeFileListener.BeforeFile(pkgCtx, filePath)
+			if err == Skip { // Shall the file be skipped?
+				continue
+			} else if err != nil { // This is an actual error...
+				return err
+			}
+		}
+
+		err := env.ParseFile(pkgCtx, filePath)
+		if fileListener, ok := env.Listener.(ListenerAfterFile); ok {
+			errAfterFile := fileListener.AfterFile(pkgCtx, filePath, err)
+			if err != nil {
+				return errAfterFile
+			}
+		}
+		if err != nil {
 			return err
 		}
 	}
