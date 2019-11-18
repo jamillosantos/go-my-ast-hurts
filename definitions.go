@@ -53,11 +53,11 @@ type Package struct {
 	RealPath    string
 	BuildInfo   *build.Package
 	Doc         Doc
-	explored    bool
+	Explored    bool
 	Variables   []*Variable
 	Constants   []*Constant
 	Methods     []*MethodDescriptor
-	methodsMap  map[string]*MethodDescriptor
+	MethodsMap  map[string]*MethodDescriptor
 	Structs     []*Struct
 	Interfaces  []*Interface
 	RefType     []RefType
@@ -77,7 +77,7 @@ func NewPackage(buildPackage *build.Package) *Package {
 		Constants:  make([]*Constant, 0),
 		Methods:    make([]*MethodDescriptor, 0),
 		Variables:  make([]*Variable, 0),
-		methodsMap: make(map[string]*MethodDescriptor),
+		MethodsMap: make(map[string]*MethodDescriptor),
 		Structs:    make([]*Struct, 0),
 		Interfaces: make([]*Interface, 0),
 		RefType: []RefType{
@@ -302,7 +302,7 @@ type Type interface {
 	AddMethod(*TypeMethod)
 }
 
-type baseType struct {
+type BaseType struct {
 	pkg        *Package
 	name       string
 	methods    []*TypeMethod
@@ -310,8 +310,8 @@ type baseType struct {
 }
 
 // NewBaseType creates a new initialized baseType.
-func NewBaseType(pkg *Package, name string) *baseType {
-	return &baseType{
+func NewBaseType(pkg *Package, name string) *BaseType {
+	return &BaseType{
 		pkg:        pkg,
 		name:       name,
 		methods:    make([]*TypeMethod, 0),
@@ -319,19 +319,23 @@ func NewBaseType(pkg *Package, name string) *baseType {
 	}
 }
 
-func (t *baseType) Package() *Package {
+func (t *BaseType) Package() *Package {
 	return t.pkg
 }
 
-func (t *baseType) Name() string {
+func (t *BaseType) Name() string {
 	return t.name
 }
 
-func (t *baseType) Methods() []*TypeMethod {
+func (t *BaseType) Methods() []*TypeMethod {
 	return t.methods
 }
 
-func (t *baseType) AddMethod(method *TypeMethod) {
+func (t *BaseType) MethodsMap() map[string]*TypeMethod {
+	return t.methodsMap
+}
+
+func (t *BaseType) AddMethod(method *TypeMethod) {
 	t.methods = append(t.methods, method)
 	t.methodsMap[method.Descriptor.Name()] = method
 }
@@ -443,11 +447,11 @@ func (p *Package) AppendRefType(name string) (ref RefType) {
 
 func (p *Package) AppendMethod(method *MethodDescriptor) {
 	p.Methods = append(p.Methods, method)
-	p.methodsMap[method.Name()] = method
+	p.MethodsMap[method.Name()] = method
 }
 
 func (p *Package) MethodByName(name string) (*MethodDescriptor, bool) {
-	m, ok := p.methodsMap[name]
+	m, ok := p.MethodsMap[name]
 	return m, ok
 }
 

@@ -1,6 +1,7 @@
-package myasthurts
+package myasthurts_test
 
 import (
+	myasthurts "github.com/lab259/go-my-ast-hurts"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -8,18 +9,18 @@ import (
 var _ = Describe("Struct", func() {
 	Describe("Implements", func() {
 		It("should find struct implements an interface", func() {
-			env, err := NewEnvironment()
+			env, err := myasthurts.NewEnvironment()
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(env.parseFile(newDataPackageContext(env), "data/interface.go")).To(Succeed())
+			Expect(env.ParseFile(newDataPackageContext(env), "data/interface.go")).To(Succeed())
 
 			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
 
 			s, ok := pkg.StructByName("InterfaceUser")
 			Expect(ok).To(BeTrue())
-			Expect(s.methodsMap).To(HaveKey("Name"))
-			Expect(s.methodsMap).To(HaveKey("SetName"))
+			Expect(s.MethodsMap()).To(HaveKey("Name"))
+			Expect(s.MethodsMap()).To(HaveKey("SetName"))
 
 			Expect(pkg.Interfaces).To(HaveLen(3))
 			Expect(pkg.Interfaces[0].Name()).To(Equal("HasName"))
@@ -30,10 +31,10 @@ var _ = Describe("Struct", func() {
 		})
 
 		It("should not recognize the interface with missing methods", func() {
-			env, err := NewEnvironment()
+			env, err := myasthurts.NewEnvironment()
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(env.parseFile(newDataPackageContext(env), "data/interface.go")).To(Succeed())
+			Expect(env.ParseFile(newDataPackageContext(env), "data/interface.go")).To(Succeed())
 
 			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
@@ -45,10 +46,10 @@ var _ = Describe("Struct", func() {
 		})
 
 		It("should not recognize the interface with incompatible methods", func() {
-			env, err := NewEnvironment()
+			env, err := myasthurts.NewEnvironment()
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(env.parseFile(newDataPackageContext(env), "data/interface.go")).To(Succeed())
+			Expect(env.ParseFile(newDataPackageContext(env), "data/interface.go")).To(Succeed())
 
 			pkg, ok := env.PackageByImportPath("data")
 			Expect(ok).To(BeTrue())
