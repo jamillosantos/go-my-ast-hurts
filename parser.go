@@ -346,6 +346,13 @@ func parseType(ctx *ParseFileContext, t ast.Expr) (RefType, error) {
 		return refType, nil
 	case *ast.InterfaceType:
 		return InterfaceRefType, nil
+	case *ast.StructType:
+		s := NewStruct(ctx.Package, "")
+		err := parseStruct(ctx, recvT, s)
+		if err != nil {
+			return nil, err
+		}
+		return NewRefType("", ctx.Package, s), nil
 	// This case covers pointers. It is recursive because pointers can be for
 	// identifiers or selectors...
 	case *ast.StarExpr:
