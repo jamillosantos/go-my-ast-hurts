@@ -345,14 +345,18 @@ func parseType(ctx *ParseFileContext, t ast.Expr) (RefType, error) {
 		refType, _ := pkgAlias.EnsureRefType(recvT.Sel.Name) // We don't care if the refType is created now or not.
 		return refType, nil
 	case *ast.InterfaceType:
-		return InterfaceRefType, nil
+		i, err := parseInterface(ctx, "", recvT, nil)
+		if err != nil {
+			return nil, err
+		}
+		return ctx.Package.AddRefType(NewRefType("", ctx.Package, i)), nil
 	case *ast.StructType:
 		s := NewStruct(ctx.Package, "")
 		err := parseStruct(ctx, recvT, s)
 		if err != nil {
 			return nil, err
 		}
-		return NewRefType("", ctx.Package, s), nil
+		return ctx.Package.AddRefType(NewRefType("", ctx.Package, s)), nil
 	// This case covers pointers. It is recursive because pointers can be for
 	// identifiers or selectors...
 	case *ast.StarExpr:

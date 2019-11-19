@@ -209,7 +209,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 		})
 
-		PIt("should parse a struct with a interface{} member", func() {
+		It("should parse a struct with a interface{} member", func() {
 			env, exrr := NewEnvironment()
 			Expect(exrr).To(BeNil())
 
@@ -223,9 +223,13 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(pkg.Structs).To(HaveLen(2))
 
 			Expect(pkg.Structs[1].Fields).To(HaveLen(5))
-			Expect(pkg.Structs[1].Fields[3].RefType).To(BeEmpty())
+			Expect(pkg.Structs[1].Fields[3].RefType.Name()).To(BeEmpty())
+			Expect(pkg.Structs[1].Fields[3].RefType.Type()).ToNot(BeNil())
+			var iType *Interface
+			Expect(pkg.Structs[1].Fields[3].RefType.Type()).To(BeAssignableToTypeOf(iType))
+			iType = pkg.Structs[1].Fields[3].RefType.Type().(*Interface)
+			Expect(iType.Methods()).To(BeEmpty())
 		})
-
 	})
 
 	When("parsing variables", func() {
