@@ -1,4 +1,4 @@
-package teste
+package models
 
 type Test struct {
 	ID   int64  `json:"id,uuidTest"`

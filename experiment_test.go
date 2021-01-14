@@ -536,7 +536,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 			Expect(pkg.Methods).To(HaveLen(2))
 			Expect(pkg.Methods[0].Doc.Comments).To(HaveLen(1))
-			Expect(pkg.Methods[0].Doc.Comments[0]).To(Equal("/** Description \n    multilines\n*/"))
+			Expect(pkg.Methods[0].Doc.Comments[0]).To(Equal("/** Description\n  multilines\n*/"))
 			Expect(pkg.Methods[1].Doc.Comments).To(BeEmpty())
 		})
 	})
