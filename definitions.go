@@ -428,11 +428,12 @@ func (p *Package) RefTypeByName(name string) (RefType, bool) {
 	return refType, ok
 }
 
-func (p *Package) AddRefType(ref RefType) {
+func (p *Package) AddRefType(ref RefType) RefType {
 	if ref.Name() != "" {
 		p.RefType = append(p.RefType, ref)
 		p.refTypeMap[ref.Name()] = ref
 	}
+	return ref
 }
 
 // AppendRefType add new RefType in Package.

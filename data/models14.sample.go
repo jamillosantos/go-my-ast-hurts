@@ -14,9 +14,13 @@ type Compra struct {
 }
 
 type User struct {
-	ID    int64  `json:"id"`
+	ID int64 `json:"id"`
 	// Line 1
 	// Line 2
 	Name  string `json:"name"`
 	Email string `json:"email"`
+	Data  interface{}
+	Data2 struct {
+		Name string
+	}
 }

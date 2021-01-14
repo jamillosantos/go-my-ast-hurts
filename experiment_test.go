@@ -209,6 +209,27 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 
 		})
 
+		It("should parse a struct with a interface{} member", func() {
+			env, exrr := NewEnvironment()
+			Expect(exrr).To(BeNil())
+
+			exrr = env.parseFile(newDataPackageContext(env), "data/models14.sample.go")
+			Expect(exrr).To(BeNil())
+
+			pkg, ok := env.PackageByImportPath("data")
+			Expect(ok).To(BeTrue())
+			Expect(pkg).NotTo(BeNil())
+
+			Expect(pkg.Structs).To(HaveLen(2))
+
+			Expect(pkg.Structs[1].Fields).To(HaveLen(5))
+			Expect(pkg.Structs[1].Fields[3].RefType.Name()).To(BeEmpty())
+			Expect(pkg.Structs[1].Fields[3].RefType.Type()).ToNot(BeNil())
+			var iType *Interface
+			Expect(pkg.Structs[1].Fields[3].RefType.Type()).To(BeAssignableToTypeOf(iType))
+			iType = pkg.Structs[1].Fields[3].RefType.Type().(*Interface)
+			Expect(iType.Methods()).To(BeEmpty())
+		})
 	})
 
 	When("parsing variables", func() {
@@ -493,7 +514,7 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(pkg.Structs[0].Doc.Comments).To(HaveLen(1))
 			Expect(pkg.Structs[0].Doc.FormatComment()).To(Equal("Testing comment\nnew line"))
 
-			Expect(pkg.Structs[1].Fields).To(HaveLen(3))
+			Expect(pkg.Structs[1].Fields).To(HaveLen(5))
 			Expect(pkg.Structs[1].Fields[1].Doc.Comments).To(HaveLen(2))
 			Expect(pkg.Structs[1].Fields[1].Doc.FormatComment()).To(Equal("Line 1\nLine 2\n"))
 
