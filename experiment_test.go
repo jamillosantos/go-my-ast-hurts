@@ -210,10 +210,10 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 		})
 
 		It("should parse a struct with a interface{} member", func() {
-			env, exrr := NewEnvironment()
+			env, exrr := myasthurts.NewEnvironment()
 			Expect(exrr).To(BeNil())
 
-			exrr = env.parseFile(newDataPackageContext(env), "data/models14.sample.go")
+			exrr = env.ParseFile(newDataPackageContext(env), "data/models14.sample.go")
 			Expect(exrr).To(BeNil())
 
 			pkg, ok := env.PackageByImportPath("data")
@@ -225,9 +225,9 @@ var _ = Describe("My AST Hurts - Parse simples files with tags and func from str
 			Expect(pkg.Structs[1].Fields).To(HaveLen(5))
 			Expect(pkg.Structs[1].Fields[3].RefType.Name()).To(BeEmpty())
 			Expect(pkg.Structs[1].Fields[3].RefType.Type()).ToNot(BeNil())
-			var iType *Interface
+			var iType *myasthurts.Interface
 			Expect(pkg.Structs[1].Fields[3].RefType.Type()).To(BeAssignableToTypeOf(iType))
-			iType = pkg.Structs[1].Fields[3].RefType.Type().(*Interface)
+			iType = pkg.Structs[1].Fields[3].RefType.Type().(*myasthurts.Interface)
 			Expect(iType.Methods()).To(BeEmpty())
 		})
 	})

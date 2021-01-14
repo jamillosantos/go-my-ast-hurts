@@ -9,10 +9,10 @@ import (
 var _ = Describe("Struct", func() {
 	Describe("Parse", func() {
 		It("should parse a struct property member", func() {
-			env, err := NewEnvironment()
+			env, err := myasthurts.NewEnvironment()
 			Expect(err).To(BeNil())
 
-			err = env.parseFile(newDataPackageContext(env), "data/models14.sample.go")
+			err = env.ParseFile(newDataPackageContext(env), "data/models14.sample.go")
 			Expect(err).To(BeNil())
 
 			pkg, ok := env.PackageByImportPath("data")
@@ -25,9 +25,9 @@ var _ = Describe("Struct", func() {
 			Expect(pkg.Structs[1].Fields[4].RefType.Name()).To(BeEmpty())
 			Expect(pkg.Structs[1].Fields[4].RefType.Type()).ToNot(BeNil())
 			Expect(pkg.Structs[1].Fields[4].RefType.Type().Name()).To(BeEmpty())
-			var sType *Struct
+			var sType *myasthurts.Struct
 			Expect(pkg.Structs[1].Fields[4].RefType.Type()).To(BeAssignableToTypeOf(sType))
-			sType = pkg.Structs[1].Fields[4].RefType.Type().(*Struct)
+			sType = pkg.Structs[1].Fields[4].RefType.Type().(*myasthurts.Struct)
 			Expect(sType.Methods()).To(BeEmpty())
 			Expect(sType.Fields).To(HaveLen(1))
 			Expect(sType.Fields[0].Name).To(Equal("Name"))
