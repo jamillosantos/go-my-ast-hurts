@@ -1,8 +1,0 @@
-// Package models is a test
-package models
-
-/* this is a func */
-func test_1(num int, text string) {
-	fmt.Println(num)
-	fmt.Println(text)
-}
