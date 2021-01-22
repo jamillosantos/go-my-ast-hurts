@@ -199,6 +199,10 @@ func parseStruct(ctx *ParseFileContext, astStruct *ast.StructType, typeStruct *S
 
 		f := &Field{
 			RefType: refType,
+			Position: Position{
+				FileName: typeStruct.pkg.ImportPath,
+				Line:     int(field.Pos()),
+			},
 		}
 
 		if field.Doc != nil {

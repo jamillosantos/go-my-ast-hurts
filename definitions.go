@@ -16,6 +16,11 @@ type Doc struct {
 	Comments []string
 }
 
+type Position struct {
+	FileName string
+	Line     int
+}
+
 // EnvConfig is a Struct to set config in Environment
 type EnvConfig struct {
 	DevMode    bool
@@ -29,10 +34,11 @@ func (ec EnvConfig) CWD() string {
 
 // Field is utilized in Struct type in the present moment.
 type Field struct {
-	Name    string
-	RefType RefType
-	Tag     Tag
-	Doc     Doc
+	Name     string
+	RefType  RefType
+	Tag      Tag
+	Doc      Doc
+	Position Position
 }
 
 // File is utilized to represent each file read in Package.
