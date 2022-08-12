@@ -7,7 +7,7 @@ import (
 	"go/build"
 	"path"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	myasthurts "github.com/jamillosantos/go-my-ast-hurts"
@@ -24,15 +24,14 @@ func newDataPackageContext(env *myasthurts.Environment) *myasthurts.ParsePackage
 	return myasthurts.NewPackageContext(pkg, buildPkg)
 }
 
-var _ = Describe("My AST Hurts - Parse simples files with tags and func from struct", func() {
+var _ = Describe("Parse simples files with tags and func from struct", func() {
 
 	Context("Initialization", func() {
-
 		var (
 			originalGOROOT string
 		)
 
-		BeforeSuite(func() {
+		BeforeEach(func() {
 			originalGOROOT = build.Default.GOROOT
 		})
 
